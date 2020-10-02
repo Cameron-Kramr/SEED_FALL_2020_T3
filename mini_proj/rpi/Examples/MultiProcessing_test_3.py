@@ -8,7 +8,10 @@ import pygame
 import math
 
 
-def pygame_aruco_display_manager(input_pipe):
+def calc_fps(start_time, end_time):
+	return 1/(end_time-start_time)
+
+def pygame_aruco_display_manager(input_pipe, debug = False):
 
 	pygame.init()
 	gameDisplay = pygame.display.set_mode((800, 600))
@@ -32,20 +35,20 @@ def pygame_aruco_display_manager(input_pipe):
 			start_time = time.time()
 			inputs = input_pipe.recv()
 			gameDisplay.fill((0,0,0))
-
 			for i in inputs:
+				#print("Pygame processing: " + str(i[0]))
 				img = font.render("ID: " + str(i[0][0]), True, (255, 0, 0))
 				px = int(i[2][0][0][0] * gain + width/2)
 				py = int(height - i[2][0][0][2] * gain)
 				pygame.draw.circle(gameDisplay, (255, 255, 255), (px, py), 10)
 				gameDisplay.blit(img, (px, py - 10))
 			end_time = time.time()
-			print("Pygame FPS: " + str(int(1/(end_time - start_time))))
-
+			if(debug):
+				print("Pygame FPS: " + str(int(1/(end_time- start_time))))
 		pygame.display.update()
 		inputs = []
 
-def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs):
+def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False):
 	output = []
 	input = []
 	#count = 0
@@ -56,6 +59,7 @@ def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs):
 		#Expect data of shape:
 		#([id, corners], ...)
 		inputs = input_pipe.recv()
+
 		start_time = time.time()
 		for i in inputs:
 			rvecs, tvecs, _objPoints = cv2.aruco.estimatePoseSingleMarkers(i[1], side_length, cam_mtx,dis_coefs )
@@ -63,13 +67,38 @@ def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs):
 		input_pipe.send(output)
 		output = []
 		end_time = time.time()
-		print("CV2 Pose FPS: " + str(int(1/(end_time-start_time))))
+		if(debug):
+			print("Cv2 Pose FPS: " + str(int(1/(end_time - start_time))))
+
+def cv2_detect_aruco_routine(input_pipe, aruco_dict, parameters, debug = False):
+
+	output = []
+
+	while(True):
+		if(input_pipe.poll()):
+			#Grab a frame
+			frame_grab_start = time.time()
+			frame = input_pipe.recv()
+			frame_grab_end = time.time()
+
+			frame_grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+			#debug info
+			if(debug):
+				print("CV2 grab Frame FPS: " + str(int(calc_fps(frame_grab_start, frame_grab_end))))
+			corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame_grey, aruco_dict, parameters = parameters)
+
+			if(len(corners) != 0):
+				#construct & send output
+				output = [(item, corners[iter]) for iter, item in enumerate(ids)]
+				input_pipe.send(output)
+
 #~~~~~~~~~~~~~~~~Initialize program~~~~~~~~~~~~~~~~~~~~#
 
 #initialize the camera
 camera = PiCamera()
 camera.resolution = (640, 480)
-camera.framerate = 30
+camera.framerate = 60
 rawCapture = PiRGBArray(camera, size=(640, 480))
 
 #load distortion and camera matrices from calibration script
@@ -83,14 +112,24 @@ parameters = cv2.aruco.DetectorParameters_create()
 #Create multiprocessing objects
 cv2_conn1, cv2_conn2 = mp.Pipe(duplex = True)
 pygme_conn1, pygme_conn2 = mp.Pipe(duplex = True)
+cv2_aruco_1_conn1, cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
+cv2_aruco_2_conn1, cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
 
+#Create mulitprocessing threads
 py_thread = mp.Process(target = pygame_aruco_display_manager, args=(pygme_conn2,))
 cv2_thread = mp.Process(target = cv2_estimate_pose, args=(cv2_conn2, 0.025, camera_mtx, dist_mtx,))
+cv2_aruco_1_thread = mp.Process(target = cv2_detect_aruco_routine, args=(cv2_aruco_1_conn2, aruco_dict, parameters, False,))
+cv2_aruco_2_thread = mp.Process(target = cv2_detect_aruco_routine, args=(cv2_aruco_2_conn2, aruco_dict, parameters, False,))
 
+#Startup threads
 py_thread.start()
 cv2_thread.start()
+cv2_aruco_1_thread.start()
+cv2_aruco_2_thread.start()
 
+#User variables:
 count = 0
+thread_1 = True
 
 #allow camera to warmup
 time.sleep(0.1)
@@ -103,47 +142,25 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port 
 
 	start = time.time()
 
-	frame_raw = frame.array
-	frame_grey = cv2.cvtColor(frame_raw, cv2.COLOR_BGR2GRAY)
+	#send frame data
+	if(thread_1):
+		cv2_aruco_1_conn1.send(frame.array)
+	else:
+		cv2_aruco_2_conn1.send(frame.array)
+	thread_1 = not thread_1
 
-	#Detect markers:
-	start_detect = time.time()
-	corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame_grey, aruco_dict, parameters = parameters)
-	end_detect = time.time()
+	#Send information if it's there
+	if cv2_aruco_1_conn1.poll():
+		cv2_conn1.send(cv2_aruco_1_conn1.recv())
+	if cv2_aruco_2_conn1.poll():
+		cv2_conn1.send(cv2_aruco_2_conn1.recv())
 
-	print("Aruco Detect FPS: " + str(int(1/(end_detect - start_detect))))
-
-	#Send information to proper thread
-	if len(corners) != 0:
-		cv_input = [(item, corners[iter]) for iter, item in enumerate(ids)]
-		cv2_conn1.send(cv_input)
-
-	#Draw and present results
-	start_draw = time.time()
-	cv2.aruco.drawDetectedMarkers(frame_raw, corners, ids)
-	cv2.aruco.drawDetectedMarkers(frame_raw, rejectedImgPoints)
-	cv2.imshow("Frame", frame_raw)
-	end_draw = time.time()
-	print("Aruco Draw FPS: " + str(int(1/(end_draw - start_draw))))
-
-
+	#Clear buffer
 	rawCapture.truncate(0)
 
-	key = cv2.waitKey(1)
-
-	if key == 27:
-		py_thread.kill()
-		cv2_thread.kill()
-		time.sleep(0.5)
-		py_thread.close()
-		py_thread.close()
-
-		break
-
 	#Check for new things from cv2 thread and sends them to pygame if they're there.
-
 	while(cv2_conn1.poll(timeout = 0)):
 		#print("Main sending data!")
 		pygme_conn1.send(cv2_conn1.recv())
 	end_time = time.time()
-	print("FPS: " + str(int(1/(end_time-start))))
+	print("Main FPS: " + str(int(1/(end_time-start))))
