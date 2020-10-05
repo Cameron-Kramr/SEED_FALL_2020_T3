@@ -48,12 +48,12 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-doneRead=false;
-if(millis() >= sampleTime+samplePeriod)//gets the sampled values
-{
+   doneRead=false;
+  if(millis() >= sampleTime+samplePeriod)//gets the sampled values
+   {
      counter=MotorEncoder.read(); //counts current position
      doneRead=true;
-     rev=counter/64; // its divided by 64 as thats how many counts are in 1 revolution
+     rev=counter/3200; // its divided by 64 as thats how many counts are in 1 revolution
      deg=counter*5.625;
      angularVelocity=((rev-prevRev)*6.2832)/(samplePeriod/1000); // ([rev] * [rad/rev])/ ([ms]*[m])= rad/s
      prevRev=rev;
