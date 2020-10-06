@@ -47,7 +47,7 @@ void setup() {
    pinMode(M1PWM,OUTPUT);
    pinMode(nSF,INPUT);      
    Serial.begin (250000);//baud rate set to 250000
-   myPID.setTimeStep(90);// time interval found from plot was sigma=.117s ==> 117ms
+   myPID.setTimeStep(90.91);// time interval found from plot was sigma=.117s ==> 117ms
 }
 
 void loop() {
@@ -60,10 +60,10 @@ analogWrite(9,output);
 if(millis() >= current_time+samplePeriod && TimeMade==true )//gets value of the position every sampled time
 {
 counter=MotorEncoder.read(); //counts current position
-rev=counter/(540*8); // its divided by 64*50 [counts per gear ratio] as thats how many counts are in 1 revolution (540 for my motor im testing)
+rev=counter/(64*50); // its divided by 64*50 [counts per gear ratio] as thats how many counts are in 1 revolution (540 for my motor im testing)
 Rad=(rev*6.2832); // rev converted to rad
 prevRev=rev;
-WheelPosition += rev;//string to hold all sampled postion values
+WheelPosition += Rad;//string to hold all sampled postion values
 WheelPosition += ' ';// makes a space for clearer reading
 CurrentTime += double((current_time-DedicatedTime)/1000);
 CurrentTime +=' ';
