@@ -37,52 +37,51 @@ int i=0;
 
 void setup() {
   // put your setup code here, to run once:
-   pinMode(nD2,OUTPUT); 
-   pinMode(M1Dir,OUTPUT);
-   pinMode(M2Dir,OUTPUT);
-   pinMode(M1PWM,OUTPUT);
-   pinMode(M1PWM,OUTPUT);
-   pinMode(nSF,INPUT);      
-   Serial.begin (250000);  
+pinMode(nD2,OUTPUT); 
+pinMode(M1Dir,OUTPUT);
+pinMode(M2Dir,OUTPUT);
+pinMode(M1PWM,OUTPUT);
+pinMode(M1PWM,OUTPUT);
+pinMode(nSF,INPUT);      
+Serial.begin (250000);  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-   doneRead=false;
-  if(millis() >= sampleTime+samplePeriod)//gets the sampled values
-   {
-     counter=MotorEncoder.read(); //counts current position
-     doneRead=true;
-     rev=counter/3200; // its divided by 64 as thats how many counts are in 1 revolution
-     deg=counter*5.625;
-     angularVelocity=((rev-prevRev)*6.2832)/(samplePeriod/1000); // ([rev] * [rad/rev])/ ([ms]*[m])= rad/s
-     prevRev=rev;
-     prevDeg=deg;
-     cVolt += commandVoltage;//string to hold all sampled voltages
-     cVolt += ' ';// makes a space for clearer reading
-     angleVel += angularVelocity; // string to hold all sample velocities
-     angleVel +=' '; // makes a sapce for clearer reading
-     sampleTime+=samplePeriod;
-   }
-  if(millis() >= current_time+period1 && i==0) //each second this is ran to start the motor
-  {
-    i++;
-    analogWrite(9,commandVoltage);
-    current_time += period1; // resets the time for another second
-  }
-   if(millis() >= currentTime2+period2) //each 2 seconds this is ran to collect data and stop the motor
-  {
-      Serial.print("Time2[ms]: ");
-      Serial.println(currentTime2+period2);  
-      Serial.print("Angular Velocity[rad/s]: ");
-      Serial.println(angleVel); 
-      Serial.print("CommandVOltage[V]: ");
-      Serial.println(cVolt); 
-      angleVel= "";//clear string
-      cVolt= "";//clear string
-      currentTime2 += period2; // resets the time for another second
-
-  }
+doneRead=false;
+if(millis() >= sampleTime+samplePeriod)//gets the sampled values
+{
+counter=MotorEncoder.read(); //counts current position
+doneRead=true;
+rev=counter/(64*50); // its divided by 64*50 as thats how many counts are in 1 revolution
+deg=counter*5.625;
+angularVelocity=((rev-prevRev)*6.2832)/(samplePeriod/1000); // ([rev] * [rad/rev])/ ([ms]*[m])= rad/s
+prevRev=rev;
+prevDeg=deg;
+cVolt += commandVoltage;//string to hold all sampled voltages
+cVolt += ' ';// makes a space for clearer reading
+angleVel += angularVelocity; // string to hold all sample velocities
+angleVel +=' '; // makes a sapce for clearer reading
+sampleTime+=samplePeriod;
+}
+if(millis() >= current_time+period1 && i==0) //each second this is ran to start the motor
+{
+i++;
+analogWrite(9,commandVoltage);
+current_time += period1; // resets the time for another second
+}
+if(millis() >= currentTime2+period2) //each 2 seconds this is ran to collect data and stop the motor
+{
+Serial.print("Time2[ms]: ");
+Serial.println(currentTime2+period2);  
+Serial.print("Angular Velocity[rad/s]: ");
+Serial.println(angleVel); 
+Serial.print("CommandVOltage[V]: ");
+Serial.println(cVolt); 
+angleVel= "";//clear string
+cVolt= "";//clear string
+currentTime2 += period2; // resets the time for another second
+}
 //  if(millis() > errorTime+errorPeriod && doneRead==false )//checks to see if we are taking too long to get data
  // {
  //  Serial.println("Error main too long");
