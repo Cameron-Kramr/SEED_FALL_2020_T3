@@ -8,7 +8,7 @@
 #define M1PWM 9 // Motor 1 speed input (Command Voltage M1)
 #define M2PWM 10 // Motor 2 speed input (command Votlage M2)
 #define nSF 12 //Status flag
-Encoder MotorEncoder(2,3); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+Encoder MotorEncoder(2,5); //used 2 and 5 as they have the best interrupt timing, will need to change when adding second motor
 
 //calculation variables
 double counter=0;
@@ -43,6 +43,7 @@ pinMode(M2Dir,OUTPUT);
 pinMode(M1PWM,OUTPUT);
 pinMode(M1PWM,OUTPUT);
 pinMode(nSF,INPUT);      
+md.init();
 Serial.begin (250000);  
 }
 
@@ -67,7 +68,7 @@ sampleTime+=samplePeriod;
 if(millis() >= current_time+period1 && i==0) //each second this is ran to start the motor
 {
 i++;
-analogWrite(9,commandVoltage);
+md.setM1Speed(commandVoltage);
 current_time += period1; // resets the time for another second
 }
 if(millis() >= currentTime2+period2) //each 2 seconds this is ran to collect data and stop the motor
