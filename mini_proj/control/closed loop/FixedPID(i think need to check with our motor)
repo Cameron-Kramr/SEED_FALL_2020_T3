@@ -1,6 +1,9 @@
 //changes the position of the motor by 1 rad at a specified time (this one should be adapted to work with our motor, still need to check) 
 #include <Encoder.h>
 #include <AutoPID.h>
+#include "DualMC33926MotorShield.h"
+
+DualMC33926MotorShield md;
 //pin defenitions
 #define nD2 4 //tri-state disables both outputs of both motor channels when low
 #define M1Dir 7 // Motor 1 direction input (voltage sign M1)
@@ -8,7 +11,7 @@
 #define M1PWM 9 // Motor 1 speed input (Command Voltage M1)
 #define M2PWM 10 // Motor 2 speed input (command Votlage M2)
 #define nSF 12 //Status flag
-Encoder MotorEncoder(2,3); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+Encoder MotorEncoder(2,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 
 //calculation variables
 double counter=0;
@@ -23,20 +26,21 @@ String CurrentTime;
 // Sampling time and display timing 
 double current_time=0;//time used un the 1 second display and start of the motor
 double sampleTime=0;
-double samplePeriod=10;//10ms
+double samplePeriod=10;//50ms
 double DedicatedTime =3000; //time in ms set to change from inital 0 rad to 1 rad, saying at 3 seconds the motor will begin to move to the postion
 int i=0;
 bool TimeMade=false;// bool to check and see that the allocated time has reached where we want it to be
-
+int x=0; 
+bool lessThan = false;
 //control 
 #define kp (29.8690294469638)// [volt/rad]
 #define kd 0// v/angularVelocity [v/rad/s]
-#define ki (6.13614858120292)// volts*rad*s
+#define ki (20)// volts*rad*s
 double output;// this is the voltage(PWM) output
-double setpoint=1;// this is the point we want in rads 
+double setpoint=6.2832;// this is the point we want in rads 
 
 
-AutoPID myPID(&Rad,&setpoint,&output,0,255,kp,ki,kd);
+AutoPID myPID(&Rad,&setpoint,&output,-255,255,kp,ki,kd);
 
 void setup() {
   // put your setup code here, to run once:
@@ -47,28 +51,34 @@ void setup() {
    pinMode(M1PWM,OUTPUT);
    pinMode(nSF,INPUT);      
    Serial.begin (250000);//baud rate set to 250000
-   myPID.setTimeStep(90.91);// time interval found from plot was sigma=.117s ==> 117ms
+   md.init();
+   myPID.setTimeStep(90.91);// time interval found from plot was sigma=90ms
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-if(TimeMade==true)
-{
-myPID.run();
-analogWrite(9,output);
-}
+
 if(millis() >= current_time+samplePeriod && TimeMade==true )//gets value of the position every sampled time
 {
-counter=MotorEncoder.read(); //counts current position
-rev=counter/(64*50); // its divided by 64*50 [counts per gear ratio] as thats how many counts are in 1 revolution (540 for my motor im testing)
-Rad=(rev*6.2832); // rev converted to rad
-prevRev=rev;
-WheelPosition += Rad;//string to hold all sampled postion values
-WheelPosition += ' ';// makes a space for clearer reading
-CurrentTime += double((current_time-DedicatedTime)/1000);
-CurrentTime +=' ';
-current_time+=samplePeriod;
-}
+  counter=MotorEncoder.read(); //counts current position
+  rev=counter/(64*50); // its divided by 64*50 [counts per gear ratio] as thats how many counts are in 1 revolution (540 for my motor im testing)
+  //Serial.println(counter);
+  current_time+=samplePeriod;
+  Rad=(rev*6.2832); // rev converted to rad
+  WheelPosition += Rad;//string to hold all sampled postion values
+  WheelPosition += ' ';// makes a space for clearer reading
+  CurrentTime += double((current_time-DedicatedTime)/1000);
+  CurrentTime +=' ';
+  myPID.run();
+  
+  md.setM1Speed(output);
+  Serial.print(Rad);
+  Serial.print("\t");
+  Serial.println(output);
+  }
+
+
+//starts this code after 3 seconds
 if(millis()>= current_time+DedicatedTime && i==0)//starts the motor at 3 seconds(or dedicated time)
 {
 Serial.println("Starting movement of motor to 1 rad");
@@ -76,14 +86,16 @@ TimeMade=true;
 current_time+=DedicatedTime; 
 i++;
 }
+
+
 if(myPID.atSetPoint(setpoint/100)== true )// reads out the times in ms corresponding to the postion as the pid controller is done working 
 {
-Serial.print("Current Positon[rad]: ");
-Serial.println(WheelPosition);
-Serial.print("Time: ");
-Serial.println(CurrentTime);
-Serial.print("Voltage Output: ");
-Serial.println(output);
-i++;
+
+//Serial.print("Current Positon[rad]: ");
+//Serial.print(WheelPosition);
+//Serial.print('\t');
+//Serial.print("Time: ");
+//Serial.println(CurrentTime);
+
 }
 }
