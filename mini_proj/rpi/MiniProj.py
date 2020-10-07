@@ -21,7 +21,7 @@ pygme_conn1, pygme_conn2 = mp.Pipe(duplex = True)
 cv2_aruco_1_conn1, cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
 cv2_aruco_2_conn1, cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
 picam_conn1, picam_conn2 = mp.Pipe(duplex = True)
-lcd_pipe_1, lcd_pipe_2 = mp.Pipe(duplex = True)
+I2C_pipe_1, I2C_pipe_2 = mp.Pipe(duplex = True)
 
 #Create Multiprocessing Objects
 picam_thread = mp.Process(target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640, 480), 60,))
@@ -29,7 +29,7 @@ py_thread = mp.Process(target = amt.pygame_aruco_display_manager, args = (pygme_
 cv2_detect_1 = mp.Process(target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,))
 cv2_detect_2 = mp.Process(target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters,))
 cv2_pose = mp.Process(target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx,))
-PI_LCD = mp.Process(target = pcmt.LCD_I2C_Handler, args = (lcd_pipe_2, (2,16), 0x08,))
+PI_I2C = mp.Process(target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
 
 #Start All Helper Threads:
 py_thread.start()
@@ -37,34 +37,58 @@ cv2_detect_1.start()
 cv2_detect_2.start()
 cv2_pose.start()
 picam_thread.start()
-PI_LCD.start()
+PI_I2C.start()
 
 #Main Variables:
 FPS = 60
 start_time = 0
+LCD_FPS = 0.7
+LCD_Start_Time = 0
+angle_in = 0
+LCD_OUTPUT = False
+rotations = [0,0,0]
+SetPoint_FPS = 60
+Set_Start = 0
+
 
 #Main Running Loop
 while(True):
 	old_start = start_time
 	start_time = time.time()
 
-	print("FPS: " + str(int(amt.calc_fps(old_start, start_time))))
+	#print("FPS: " + str(int(amt.calc_fps(old_start, start_time))))
 
 	while(cv2_aruco_1_conn1.poll()):
 		cv2_conn1.send(cv2_aruco_1_conn1.recv())
 	while(cv2_aruco_2_conn1.poll()):
 		cv2_conn1.send(cv2_aruco_2_conn1.recv())
 	while(cv2_conn1.poll()):
+		LCD_OUTPUT = True
 		poses = cv2_conn1.recv()
 		pygme_conn1.send(poses)
 
 		rot_mtx, jacob = cv2.Rodrigues(poses[0][1][0][0])
-
 		rotations = detect_angle.calc_Euclid_Angle(rot_mtx) * 180/math.pi
-		lcd_pipe_1.send([pcmt.LCD_CMD.CLR_MSSG, "X rot: " + str(rotations[0]) + " Y rot: " + str(rotations[1]) + " Z rot: " + str(rotations[2])])
+
+	if(time.time() - Set_Start >= 1/SetPoint_FPS):
+		Set_Start = time.time()
+		I2C_pipe_1.send([pcmt.I2C_CMD.WRITE_ARDU, detect_angle.deg_2_byte(rotations[2])])
+
+
+	if(time.time() - LCD_Start_Time >= 1/LCD_FPS and LCD_OUTPUT):
+		LCD_Start_Time = time.time()
+		#Message = "ID: " + str(poses[0][0][0]) + " X:" + str(int(rotations[0])) + " Y:" + str(int(rotations[1])) + "\nZ: " + str(int(rotations[2]))
+		I2C_pipe_1.send([pcmt.I2C_CMD.FETCH_ANGLE,0])
+		Message = "ID: " + str(poses[0][0][0]) + " Z: " + str(int(rotations[2])) + "\nAct: " + str(int(angle_in))
+		print(Message)
+		I2C_pipe_1.send([pcmt.I2C_CMD.LCD_CLR_MSG, Message])
+
+	if(I2C_pipe_1.poll()):
+		angle_in = I2C_pipe_1.recv()
 
 
 	#Lock FPS
 	end_time = time.time()
 	time.sleep(max(1/FPS - (end_time - start_time), 0))
+
 

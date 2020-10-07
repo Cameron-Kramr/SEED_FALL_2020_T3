@@ -9,6 +9,9 @@ def detect_angle(corners):
 	else:
 		return math.pi - math.atan2(avg[1],avg[0])*180/math.pi
 
+def deg_2_byte(val):
+	return int(val/180*128)
+
 #Calculates the Euclidean Angle given the rvecs
 def calc_Euclid_Angle(rvec):
 	sy = math.sqrt(rvec[0,0]**2 + rvec[1,0]**2)
