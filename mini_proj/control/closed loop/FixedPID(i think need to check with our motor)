@@ -33,9 +33,9 @@ bool TimeMade=false;// bool to check and see that the allocated time has reached
 int x=0; 
 bool lessThan = false;
 //control 
-#define kp (29.8690294469638)// [volt/rad]
+#define kp (43.4910011028191)// [volt/rad]
 #define kd 0// v/angularVelocity [v/rad/s]
-#define ki (20)// volts*rad*s
+#define ki (11.8539126668366)// volts*rad*s
 double output;// this is the voltage(PWM) output
 double setpoint=6.2832;// this is the point we want in rads 
 
