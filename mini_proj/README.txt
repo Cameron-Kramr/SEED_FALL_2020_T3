@@ -13,10 +13,9 @@ rpi code not covered in this file is ansillary and not vital to operation or rel
 
 
 ####################Control####################
-PIDControl/PIDControl.ino ~~~~~~~~~ Main code file for arduino. Upload this file to start arduino portion of code
-motorEncoder.m
-OpenLoopSystem.slx
-step_response
-closed loop/Closed loop responce with PID library
-closed loop/closedloopMatlab
-closed loop/FixedPID(i think need to check with our motor)
+PIDControl/PIDControl.ino ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Main code file for arduino. Upload this file to start arduino portion of code
+motorEncoder.m ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Matlab Sript ran to compare experimental and simulated values found for the open loop system
+Closed_OpenLoopedSystems.slx ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Simulink file containing both the closed loop and the open loop systems
+step_response ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Arduino code used to test the motor angular velocity, and to determine the transfer funtion
+closed loop/FixedPID(i think need to check with our motor) ~~ Arduino code used to compare the experimental values of the motor system with a PI controller 
+closed loop/closedloopMatlab ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Matlab file used to compare experimental and simulated values found for the closed loop system
