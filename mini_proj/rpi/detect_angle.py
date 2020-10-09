@@ -1,3 +1,9 @@
+#Cameron Kramr
+#10/09/2020
+#EENG 350
+#Section A 
+#Computer Vision
+#Contains useful functions for detecting angles and dealing with data from open cv
 import math
 import numpy as np
 
@@ -9,6 +15,7 @@ def detect_angle(corners):
 	else:
 		return math.pi - math.atan2(avg[1],avg[0])*180/math.pi
 
+#Converts a degree value to a single byte of information
 def deg_2_byte(val):
 	return int(val/180*128)
 
@@ -25,6 +32,7 @@ def calc_Euclid_Angle(rvec):
 		z = 0
 	return np.array([x,y,z])
 
+#Used to debug the operation of this code
 if(__name__ == "__main__"):
 	g = np.zeros((4,2))
 	g[0] = (0,1)
