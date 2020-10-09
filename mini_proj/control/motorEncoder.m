@@ -15,7 +15,7 @@ xlabel('Time (S)')
 ylabel('[(Rad/s)/[PWMcnt]]')
 title('Experimental step responce')
 %% Corresponding Simulink graph
-out=sim('OpenLoopSystem'); % For ease put both open and closed loop system on 1 simulink file
+out=sim('Closed_OpenLoopedSystems'); % For ease put both open and closed loop system on 1 simulink file
 figure(2);
 plot((out.openLoop))
 xlabel('Time (S)')
