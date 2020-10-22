@@ -1,4 +1,4 @@
-//Finding responce of instantaneous velocity for the system with 2 wheels spinning. 
+//Finding responce of instantaneous velocity for the system with 2 wheels spinning. Need to  fix in order to get more accurate readings
 #include <Encoder.h>
 #include "DualMC33926MotorShield.h" //PWm goes from -400 to 400 
 #include <AutoPID.h>
@@ -14,9 +14,13 @@ Encoder MotorEncoder1(2,5); //used 2 and 3 as they have the best interrupt timin
 Encoder MotorEncoder2(3,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 
 int WheelSpinTime=3000; // Spin wheel for 3 seconds
-int sampleTime=10;//10 ms
+double sampleTime=10;//10 ms
 int RealTime=0;
 int i=0;
+double Rad1Prev=0;
+double Rad2Prev=0;
+double RadV1=0;
+double RadV2=0;
 //interupt times 
 volatile double interuptTime=0;
 
@@ -43,8 +47,8 @@ void setup() {
    pinMode(nSF,INPUT);     
    md.init(); 
    Serial.begin (250000);//baud rate set to 250000
-   attachInterrupt(digitalPinToInterrupt(2),EncoderChange,CHANGE);
-   attachInterrupt(digitalPinToInterrupt(3),EncoderChange,CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(2),EncoderChange,CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(3),EncoderChange,CHANGE);
 }
 
 void loop() {
@@ -55,7 +59,15 @@ void loop() {
    md.setM2Speed(400); //Full speed for wheel 2 might half
    counter1=MotorEncoder1.read();
    counter2=MotorEncoder2.read();  
-   Serial.println(RotationalV1+RotationalV2); //remove the 100 after testing, used it for easier reading
+   rev1=(counter1)/(64*50);
+   rev2=(counter1)/(64*50);
+   Rad1=rev1*6.2832;
+   Rad2=rev2*6.2832;
+   RadV1=(Rad1-Rad1Prev)/(sampleTime/1000);
+   RadV2=(Rad2-Rad2Prev)/(sampleTime/1000);
+   Serial.println(RadV1+RadV2); //remove the 100 after testing, used it for easier reading
+   Rad1Prev=Rad1;
+   Rad2Prev=Rad2;
    RealTime+=sampleTime;
   }
  if(millis()> WheelSpinTime && i==0) //stops the motor from running after we reach whatever value is assigned to WheelSpinTime
@@ -66,15 +78,4 @@ void loop() {
   } 
 }
 
-//interrupt 
-void EncoderChange() //ISR that detects when the motor encoder value is changed finding its velocity (This is off needs a troubleshoot)
-{
-   interuptTime=millis(); // Current time when ISR is called 
-   rev1=counter1/(64*50); // revolutions made for motor 1(64*50 because 64 cnts per rev and 50 gear ratio)
-   rev2=counter2/(64*50); // revolutions made for motor 2
-   Rad1= rev1*6.2832; // Radians mad for motor 1
-   Rad2= rev2*6.2382; // Radians mad for motor 1
-   RotationalV1=Rad1/(interuptTime/1000);//gets rotational velocity of the 1st motor with change in time (rad/(ms*(1/m))= rad/s)
-   RotationalV2=Rad2/(interuptTime/1000);//gets rotational velocity of the 2nd motor with change in time (rad/(ms*(1/m))= rad/s)
-
-  }
+//interrupt last one was terrible rethink
