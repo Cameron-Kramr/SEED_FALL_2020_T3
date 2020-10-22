@@ -1,24 +1,22 @@
-%Plots the values read from arduino for the 2 motors
 %%
-clc;
-clear; 
-port='COM7';% changes based on system
-obj = serialport(port, 250000);
-configureTerminator(obj,"CR/LF");
+clear 
+port='COM8';% changes based on system
+obj = serial(port, 'BaudRate', 250000);
+obj.terminator = 'CR/LF';
 if isempty(instrfind) %put a ~ before isempty run then remove the ~ and run again that should get the code to work
      fclose(instrfind);
       delete(instrfind);
 end
-flush(obj);
-for k = 1:300
-RadVelocity=readline(obj);
-RadVel(k)=RadVelocity;
-display(RadVelocity);
+fopen(obj);
+for k =1:300
+Velocity=fgetl(obj);
+cCheck=convertCharsToStrings(Velocity);
+RadVel(k)=cCheck;
+display(Velocity);
 end
 fclose(obj);
-%Have to run seperatly for some reason it breaks after closing
 %%
 Vel=str2double(RadVel);
 r=2.88*0.0254; %radius in meters
-InstantVel=r*(Vel/2)
+InstantVel=r*(Vel/2);
 plot(InstantVel)
