@@ -1,0 +1,91 @@
+//moving the system a dedicated rotation and move 1 foot forward (still needs to be tested).
+#include <Encoder.h>
+#include "DualMC33926MotorShield.h" //PWm goes from -400 to 400 
+#include <AutoPID.h>
+
+#define nD2 4 //tri-state disables both outputs of both motor channels when low
+#define M1Dir 7 // Motor 1 direction input (voltage sign M1)
+#define M2Dir 8 // motor 2 direction input (Voltage sign M2)
+#define M1PWM 9 // Motor 1 speed input (Command Voltage M1)
+#define M2PWM 10 // Motor 2 speed input (command Votlage M2)
+#define nSF 12 //Status flag
+
+Encoder MotorEncoder1(2,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+Encoder MotorEncoder2(3,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+
+int WheelSpinTime=3000; // Spin wheel for 3 seconds
+int sampleTime=10;//10 ms
+int RealTime=0;
+int i=0;
+//interupt times 
+double interuptTime=0;
+
+double counter1=0; //counter for motor 1 and 2 resp.
+double counter2=0;
+double rev1=0;
+double rev2=0;// revolutions made for motor 1 and 2 resp.
+double Rad1=0;
+double Rad2=0;//Rads for motor 1 and 2 resp.
+double anglePosition=0;//Current angulay distance traveled calculated
+double angleoutput=0;
+double anglesetpoint=90; //angular distance to travel
+double DistancePosition=0;//Current distance traveled calculated
+double Distanceoutput=0;
+double Distancesetpoint=1; //distance to be traveled (1 f00t for now)
+double r= 2.88;//Radius of wheel which is 2.88 in
+double d=14;//length from the wheels(recheck)
+#define kpD (300)
+#define kdD 0
+#define kiD (30)
+#define kpA (300)
+#define kdA 0
+#define kiA (30)
+
+
+AutoPID angleCon(&anglePosition,&anglesetpoint,&angleoutput,-400,400,kpA,kiA,kdA);
+AutoPID DistanaceCon(&DistancePosition,&Distancesetpoint,&Distanceoutput,-400,400,kpD,kiD,kdD);
+DualMC33926MotorShield md;
+
+void setup() {
+  // put your setup code here, to run once:
+   pinMode(nD2,OUTPUT); 
+   pinMode(M1Dir,OUTPUT);
+   pinMode(M2Dir,OUTPUT);
+   pinMode(M1PWM,OUTPUT);
+   pinMode(M1PWM,OUTPUT);
+   pinMode(nSF,INPUT);     
+   md.init(); 
+   Serial.begin (250000);//baud rate set to 250000
+   angleCon.setTimeStep(111);
+   DistanaceCon.setTimeStep(111);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  while(millis()>RealTime+sampleTime && angleCon.atSetPoint(.01)==false) //samples to get angular postion each 10ms and when the controller detects that the system made it a cerain threshold
+  {
+   counter1=MotorEncoder1.read();
+   counter2=MotorEncoder2.read();  
+   rev1= counter1/(64*50);
+   rev2= counter2/(64*50);
+   Rad1= rev1*6.2832;
+   Rad2= rev2*6.2832;
+   anglePosition=(Rad1-Rad2)*(r/d);
+   angleCon.run();
+   md.setM1Speed(angleoutput);
+   md.setM2Speed(-angleoutput); 
+  }
+    while(millis()>RealTime+sampleTime && angleCon.atSetPoint(.01)==true) //samples each 10 ms to get distance after angular position is made
+  {
+   counter1=MotorEncoder1.read();
+   counter2=MotorEncoder2.read();  
+   rev1= counter1/(64*50);
+   rev2= counter2/(64*50);
+   Rad1= rev1*6.2832;
+   Rad2= rev2*6.2832;
+   DistancePosition=r*(1/12)*((rev1+rev2)/2);
+   DistanaceCon.run();
+   md.setM1Speed(Distanceoutput);
+   md.setM2Speed(Distanceoutput); 
+  }
+}
