@@ -1,0 +1,66 @@
+//moving the system a dedicated amount of feet (still needs to be tested).
+#include <Encoder.h>
+#include "DualMC33926MotorShield.h" //PWm goes from -400 to 400 
+#include <AutoPID.h>
+
+#define nD2 4 //tri-state disables both outputs of both motor channels when low
+#define M1Dir 7 // Motor 1 direction input (voltage sign M1)
+#define M2Dir 8 // motor 2 direction input (Voltage sign M2)
+#define M1PWM 9 // Motor 1 speed input (Command Voltage M1)
+#define M2PWM 10 // Motor 2 speed input (command Votlage M2)
+#define nSF 12 //Status flag
+
+Encoder MotorEncoder1(2,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+Encoder MotorEncoder2(3,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+
+int WheelSpinTime=3000; // Spin wheel for 3 seconds
+int sampleTime=10;//10 ms
+int RealTime=0;
+int i=0;
+//interupt times 
+double interuptTime=0;
+
+double counter1=0; //counter for motor 1 and 2 resp.
+double counter2=0;
+double rev1=0;
+double rev2=0;// revolutions made for motor 1 and 2 resp.
+double Rad1=0;
+double Rad2=0;//Rads for motor 1 and 2 resp.
+double Position=0;//Current distance traveled calculated
+double output=0;
+double setpoint=5; //distance to be traveled (5 feet for now)
+#define kp (300)//change dependent on system
+#define kd 0// change dependent on system
+#define ki (30)// change dependent on system
+
+AutoPID myPID(&Position,&setpoint,&output,-400,400,kp,ki,kd);
+DualMC33926MotorShield md;
+
+void setup() {
+  // put your setup code here, to run once:
+   pinMode(nD2,OUTPUT); 
+   pinMode(M1Dir,OUTPUT);
+   pinMode(M2Dir,OUTPUT);
+   pinMode(M1PWM,OUTPUT);
+   pinMode(M1PWM,OUTPUT);
+   pinMode(nSF,INPUT);     
+   md.init(); 
+   Serial.begin (250000);//baud rate set to 250000
+   myPID.setTimeStep(111);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+   while(millis()>RealTime+sampleTime ) // Samples and finds the amount of distance traveled each 10ms
+  {
+   counter1=MotorEncoder1.read();
+   counter2=MotorEncoder2.read();  
+   rev1= counter1/(64*50);
+   rev2= counter2/(64*50);
+   Position= 2.88*(1/12)*((rev1+rev2)/2)*2*pi; [(in)*(ft/in)*(rev/2)*2*pi]={circumfrance*revolutions made}=Linear distsance traveled in Ft
+   myPID.run();
+   md.setM1Speed(output);
+   md.setM2Speed(output); 
+  }
+
+}
