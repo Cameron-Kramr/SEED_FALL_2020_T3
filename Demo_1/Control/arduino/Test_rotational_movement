@@ -20,20 +20,25 @@ int i=0;
 //interupt times 
 double interuptTime=0;
 
+
 double counter1=0; //counter for motor 1 and 2 resp.
 double counter2=0;
 double rev1=0;
 double rev2=0;// revolutions made for motor 1 and 2 resp.
 double Rad1=0;
 double Rad2=0;//Rads for motor 1 and 2 resp.
+double r= 2.88;//Radius of wheel which is 2.88 in
+double d=14;//length from the wheels(recheck)
+
+
 double anglePosition=0;//Current angulay distance traveled calculated
 double angleoutput=0;
-double anglesetpoint=90; //angular distance to travel
+double anglesetpoint=pi; //angular distance to travel
 double DistancePosition=0;//Current distance traveled calculated
 double Distanceoutput=0;
 double Distancesetpoint=1; //distance to be traveled (1 f00t for now)
-double r= 2.88;//Radius of wheel which is 2.88 in
-double d=14;//length from the wheels(recheck)
+
+
 #define kpD (300)
 #define kdD 0
 #define kiD (30)
