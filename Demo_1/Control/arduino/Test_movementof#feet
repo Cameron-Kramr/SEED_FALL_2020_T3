@@ -57,7 +57,7 @@ void loop() {
    counter2=MotorEncoder2.read();  
    rev1= counter1/(64*50);
    rev2= counter2/(64*50);
-   Position= 2.88*(1/12)*((rev1+rev2)/2)*2*pi; [(in)*(ft/in)*(rev/2)*2*pi]={circumfrance*revolutions made}=Linear distsance traveled in Ft
+   Position= 2.88*(1/12)*((rev1+rev2)/2)*2*3.14; [(in)*(ft/in)*(rev/2)*2*pi]={circumfrance*revolutions made}=Linear distsance traveled in Ft
    myPID.run();
    md.setM1Speed(output);
    md.setM2Speed(output); 
