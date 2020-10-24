@@ -60,7 +60,7 @@ void loop() {
    counter1=MotorEncoder1.read();
    counter2=MotorEncoder2.read();  
    rev1=(counter1)/(64*50);
-   rev2=(counter1)/(64*50);
+   rev2=(counter2)/(64*50);
    Rad1=rev1*6.2832;
    Rad2=rev2*6.2832;
    RadV1=(Rad1-Rad1Prev)/(sampleTime/1000);
