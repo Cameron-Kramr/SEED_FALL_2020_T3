@@ -29,11 +29,11 @@ double Rad2=0;//Rads for motor 1 and 2 resp.
 double Position=0;//Current distance traveled calculated
 double output=0;
 double setpoint=5; //distance to be traveled (5 feet for now)
-#define kp (300)//change dependent on system
-#define kd 0// change dependent on system
-#define ki (30)// change dependent on system
-
-AutoPID myPID(&Position,&setpoint,&output,-400,400,kp,ki,kd);
+#define kp (736.126854893902)//change dependent on system
+#define kd (0)// change dependent on system
+#define ki (58.8003939053247)// change dependent on system
+double r=2.88/12;
+AutoPID myPID(&Position,&setpoint,&output,-200,200,kp,ki,kd);
 DualMC33926MotorShield md;
 
 void setup() {
@@ -46,7 +46,7 @@ void setup() {
    pinMode(nSF,INPUT);     
    md.init(); 
    Serial.begin (250000);//baud rate set to 250000
-   myPID.setTimeStep(111);
+   myPID.setTimeStep(112);
 }
 
 void loop() {
@@ -57,7 +57,7 @@ void loop() {
    counter2=MotorEncoder2.read();  
    rev1= counter1/(64*50);
    rev2= counter2/(64*50);
-   Position= 2.88*(1/12)*((rev1+rev2)/2)*2*3.14; [(in)*(ft/in)*(rev/2)*2*pi]={circumfrance*revolutions made}=Linear distsance traveled in Ft
+   Position= r*((rev1+rev2)/2)*(2*3.14);// [(in)*(ft/in)*(rev/2)*2*pi]={circumfrance*revolutions made}=Linear distsance traveled in Ft
    myPID.run();
    md.setM1Speed(output);
    md.setM2Speed(output); 
