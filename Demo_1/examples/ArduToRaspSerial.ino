@@ -13,7 +13,7 @@ void loop() {
     Serial.println(data);                               //sends data to Pi
   } 
   
-}                                                       //SIDE NOTE: It seems like each "byte" is 8 bits long, which confuses me. But it works so who am I to argue.
+}                                   
 
 
 
