@@ -15,21 +15,22 @@
 #define nSF 12 //Status flag
 
 // Control variables
-#define kp_P (3)//Positional por. gain
-#define kd_P (10)//Positional dif. gain
+#define kp_P (4)//Positional por. gain
+#define kd_P (100)//Positional dif. gain
 #define ki_P (0)//Positional int. gain
 
 #define kp_A (50)     //Wheel 2 velocity por. gain
 #define kd_A (100)  //Wheel 2 velocity dif. gain
-#define ki_A (50)   //Wheel 2 velocity int. gain
+#define ki_A (100)   //Wheel 2 velocity int. gain
 
 #define kp_B (50)   //Wheel 2 velocity por. gain
 #define kd_B (100)  //Wheel 2 velocity dif. gain
-#define ki_B (50)   //Wheel 2 velocity int. gain
+#define ki_B (100)   //Wheel 2 velocity int. gain
 
 
 //COMMS Variables:
 byte comm_buffer[COMMS_BUFFER];
+String Test_MSG;
 
 Encoder MotorEncoder1(2,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 Encoder MotorEncoder2(3,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
@@ -120,8 +121,14 @@ while(millis()> Time_1 + Interval_time)
 
   if (Serial.available() > 0){                          //checks if bytes were sent
     Serial.readBytesUntil('\n',comm_buffer,COMMS_BUFFER);                  //reads in all the bytes
-    Serial.print(comm_buffer[0]);
     convert_Serial_Data(&Radius, &omega, comm_buffer);
+    
+    sprintf(comm_buffer, "Radius: %d\n\r", Radius);
+    Test_MSG = comm_buffer;
+    Serial.println(Radius);
+    sprintf(comm_buffer, "Omega: %d\n\r", omega);
+    Test_MSG = comm_buffer;
+    Serial.println(omega);
     Serial.println("ACK");
     
     counter1_offset = MotorEncoder1.read();
@@ -140,8 +147,8 @@ while(millis()> Time_1 + Interval_time)
    rev2=(counter2)/(64*50); // Get revolutions made for motor 2
 
    //Convert motor rotations to radians
-   Rad1=rev1*6.2832; // Get radians made for motor 1
-   Rad2=rev2*6.2832; // Get radians made for motor 2 
+   Rad1=rev1*6.2832; // Get radians for motor 1
+   Rad2=rev2*6.2832; // Get radians for motor 2 
 
     //Calculate radial velocity of each wheel
    Vel_A=(Rad1-Rad1Prev)/(Interval_time/1000); //{Rad/s}
@@ -175,7 +182,7 @@ while(millis()> Time_1 + Interval_time)
   //Push control values to motor output
    motor_shield.setM1Speed(output_A);
    motor_shield.setM2Speed(output_B);
-   
+   /*
    Serial.print(Position_RA);
    Serial.print('\t');
    Serial.print(setpoint_RA);
@@ -183,7 +190,8 @@ while(millis()> Time_1 + Interval_time)
    Serial.print(Position_RB);
    Serial.print('\t');
    Serial.print(setpoint_RB);
-   Serial.print('\t');
+   Serial.println('\t');
+   /*
    Serial.print(Vel_A);
    Serial.print('\t');
    Serial.print(setpoint_A);
@@ -196,7 +204,7 @@ while(millis()> Time_1 + Interval_time)
    Serial.print('\t');
    Serial.print(omega);
    Serial.print('\n');
-   
+   */
    Rad1Prev=Rad1;
    Rad2Prev=Rad2;
 
