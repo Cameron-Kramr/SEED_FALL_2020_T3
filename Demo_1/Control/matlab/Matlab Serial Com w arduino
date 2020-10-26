@@ -18,10 +18,11 @@ fclose(obj);
 %%
 AngleVel_A=str2double(RadVel(1:2:end));
 AngleVel_B=str2double(RadVel(2:2:end));
-r=2.88/12; %radius in feet of each wheel
-InstantVel_A=r*(AngleVel_A); v=wr
-InstantVel_B=r*(AngleVel_B); v=wr
 figure(1)
-plot(InstantVel_A)
+plot(AngleVel_A)
 figure(2)
-plot(InstantVel_B)
+plot(AngleVel_B)
+k_A=1;
+sigma_A=100;
+k_B=1;
+sigma_B=100;
