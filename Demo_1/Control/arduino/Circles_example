@@ -56,8 +56,8 @@ double r=2.88/12;// Radius of wheel in feet
 double des_X=2;
 double des_Y=1;
 double Radius=1; //Radius of circle 
-double d=(13.125/2)/12; //Distance wheel to center in feet
-double omega=1.25; //{Rad/s}
+double d=(15.25/2)/12; //Distance wheel to center in feet
+double omega=1.25; //angular velocity {Rad/s}
 
 double Time_1=0; // time delay for next interval
 double Interval_time=10;//sample interval time =10ms
@@ -103,8 +103,8 @@ while(millis()> Time_1 + Interval_time)
    Vel_A=(Rad1-Rad1Prev)/(Interval_time/1000); //{Rad/s}
    Vel_B=(Rad2-Rad2Prev)/(Interval_time/1000); //{Rad/s}
 
-   setpoint_B=((Radius+d)*omega)/r; // Get current linear velocity for motor 2
-   setpoint_A=((Radius-d)*omega)/r; // Get current linear velocity for motor 1
+   setpoint_B=((Radius+d)*omega); // Get current linear velocity for motor 2 {Rad/s}
+   setpoint_A=((Radius-d)*omega); // Get current linear velocity for motor 1 {Rad/s}
 
 
   // Position=2*3.14*r*((rev1+rev2)/2);
