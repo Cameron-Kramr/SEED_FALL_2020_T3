@@ -19,10 +19,11 @@ from array import array
 import sys
 import math
 import time
+import pygame
 
 #Field container for field operations
 class Field:
-
+5	a5423q1	`*9+6
     #Class initializer creates variables used later
     def __init__(self, X_size = 1, Y_size = 1, type = 'i', default_value = 0):
 
@@ -78,7 +79,7 @@ class Flow_Field:
     
     #Initializes the class creates variables used later
     def __init__(self, X_size = 1, Y_size = 1, goal_x = 0, goal_y = 0):
-        self.Cost         =   Field(X_size, Y_size, 'f', 1)
+        self.Cost         =   Field(X_size, Y_size, 'f', 10)
         self.Integration  =   Field(X_size, Y_size, 'f', 0)
         self.Flow         =   Field(X_size, Y_size, 'I', 0)
         
@@ -232,8 +233,43 @@ class Flow_Field:
         for i in self.Flow:
             return 0
 
+#Display the aruco markers onto the pigame display
+def pygame_flow_field_display(flow_field):
+	#Initialize pygame objects
+	pygame.init()
+	gameDisplay = pygame.display.set_mode((800, 600))
+	gameDisplay.fill((0,0,0))
+	font = pygame.font.SysFont(None, 15)
+
+	inputs = []
+
+	width, height = pygame.display.get_surface().get_size()
+
+	gain = 25
+	color_gain = 5
+	
+	#Infinite loop to handle drawing new frames of the locations of markers
+		#Clear the display
+	gameDisplay.fill((0,0,0))
+	
+	x_offset = int(flow_field.X_size/2)
+	y_offset = int(flow_field.Y_size/2)
+	
+	for X_cur in range(flow_field.X_size):
+		for Y_cur in range(flow_field.Y_size):
+		
+			img = font.render(str(flow_field.Cost.get(X_cur,Y_cur)), True, (255, 255, 255))
+			
+			#Draw the circle and blit the text onto the display
+			pygame.draw.circle(gameDisplay, (min(flow_field.Integration.get(X_cur,Y_cur)*color_gain, 255), 0, 0), ((X_cur + x_offset) * gain, (Y_cur + y_offset) * gain), 10)
+			gameDisplay.blit(img, ((X_cur + x_offset) * gain, (Y_cur + y_offset) * gain))
+		
+	#Update the display with the new images and clear the input
+	while(True):
+		pygame.display.update()
+	
 #Create the field
-field = Flow_Field(150,15)
+field = Flow_Field(150,150, 4, 4)
 
 #Configure the cost considerations
 field.Cost.set(1,0,5)
@@ -248,6 +284,8 @@ field.Cost.set(9,0,5)
 field.Cost.set(4,3,5)
 field.Cost.set(4,4,5)
 field.Cost.set(4,5,5)
+field.Cost.set(4,1,5)
+field.Cost.set(4,2,5)
 
 #Calculate the integration Field
 start = time.time()
@@ -261,3 +299,5 @@ field.calc_flow()
 print(str(field.Cost))
 print(str(field.Integration))
 print(str(field.Flow))
+
+pygame_flow_field_display(field)
