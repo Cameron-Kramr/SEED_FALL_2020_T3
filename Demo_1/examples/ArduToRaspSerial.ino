@@ -18,4 +18,23 @@ void loop() {
 
 
 
+
+/*
+void loop() {                                           //this loop reads bytes and stores them in a character array
+  char arra[5];                                         //decrares character array
+
+  if (Serial.available() > 0){
+    Serial.readBytesUntil('\n',arra,5);                 //the '\n' is the character that the function looks for in the bytes to know to stop reading
+
+    for (int i = 0; i<5; i++){                          //this just prints the character array
+      Serial.println(arra[i]);
+    }
+    
+  }
+  
+}
+  
+*/
+
+
 //
