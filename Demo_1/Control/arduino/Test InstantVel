@@ -65,7 +65,8 @@ void loop() {
    Rad2=rev2*6.2832;
    RadV1=(Rad1-Rad1Prev)/(sampleTime/1000);
    RadV2=(Rad2-Rad2Prev)/(sampleTime/1000);
-   Serial.println(RadV1+RadV2); //remove the 100 after testing, used it for easier reading
+   Serial.println(RadV1); //remove the 100 after testing, used it for easier reading
+   Serial.println(RadV2);
    Rad1Prev=Rad1;
    Rad2Prev=Rad2;
    RealTime+=sampleTime;
@@ -77,5 +78,3 @@ void loop() {
   i++;
   } 
 }
-
-//interrupt last one was terrible rethink
