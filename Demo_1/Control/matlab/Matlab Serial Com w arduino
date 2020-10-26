@@ -8,7 +8,7 @@ if isempty(instrfind) %put a ~ before isempty run then remove the ~ and run agai
       delete(instrfind);
 end
 fopen(obj);
-for k =1:300
+for k =1:600
 Velocity=fgetl(obj);
 cCheck=convertCharsToStrings(Velocity);
 RadVel(k)=cCheck;
@@ -16,7 +16,12 @@ display(Velocity);
 end
 fclose(obj);
 %%
-Vel=str2double(RadVel);
-r=2.88*0.0254; %radius in meters
-InstantVel=r*(Vel/2);
-plot(InstantVel)
+AngleVel_A=str2double(RadVel(1:2:end));
+AngleVel_B=str2double(RadVel(2:2:end));
+r=2.88/12; %radius in feet of each wheel
+InstantVel_A=r*(AngleVel_A); v=wr
+InstantVel_B=r*(AngleVel_B); v=wr
+figure(1)
+plot(InstantVel_A)
+figure(2)
+plot(InstantVel_B)
