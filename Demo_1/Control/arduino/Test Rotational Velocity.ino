@@ -56,7 +56,7 @@ void loop() {
   while(millis()>RealTime+sampleTime && millis() < WheelSpinTime) // Spins wheel for 1 second every 10ms and collects the angular velocity
   {
    md.setM1Speed(200); //Full speed for wheel 1 might half
-   md.setM2Speed(-200); //Full speed for wheel 2 might half
+   md.setM2Speed(200); //Full speed for wheel 2 might half
    counter1=MotorEncoder1.read();
    counter2=MotorEncoder2.read();  
    rev1=(counter1)/(64*50);
@@ -65,7 +65,8 @@ void loop() {
    Rad2=rev2*6.2832;
    RadV1=(Rad1-Rad1Prev)/(sampleTime/1000);
    RadV2=(Rad2-Rad2Prev)/(sampleTime/1000);
-   Serial.println(RadV1-RadV2); //remove the 100 after testing, used it for easier reading
+   Serial.println(RadV1); //remove the 100 after testing, used it for easier reading
+   Serial.println(RadV2); //remove the 100 after testing, used it for easier reading
    Rad1Prev=Rad1;
    Rad2Prev=Rad2;
    RealTime+=sampleTime;
