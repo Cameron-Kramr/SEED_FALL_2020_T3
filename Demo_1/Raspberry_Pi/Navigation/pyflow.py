@@ -2,7 +2,7 @@
 #Written By: Cameron Kramr
 #Date: 08/25/2020
 #EENG 350
-#References:http://leifnode.com/2013/12/flow-field-pathfinding/
+#References:http://leifcell.com/2013/12/flow-field-pathfinding/
 #https://gamedevelopment.tutsplus.com/tutorials/understanding-goal-based-vector-field-pathfinding--gamedev-9007
 #http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter23_Crowd_Pathfinding_and_Steering_Using_Flow_Field_Tiles.pdf
 #https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
@@ -12,7 +12,7 @@
 #So make a different path. This code generates the shortest path toward the goal for every possible starting position.
 #The results can be verified in the output by looking at the second graph which shows the Integration function. 
 #If you start at any point on this plot, following the neighbour with the lowest value will lead to the goal (default (0,0)).
-#The last graph shows the node that each node leads to. These are done by ID and so can be difficult to follow.
+#The last graph shows the cell that each cell leads to. These are done by ID and so can be difficult to follow.
 #This algorithm can be slow for large areas
 
 from array import array
@@ -31,6 +31,7 @@ class Field:
 		
 		self.X_size = X_size
 		self.Y_size = Y_size
+		self.type = type
 
 	#String override used to print out fields to console
 	def __str__(self):
@@ -41,6 +42,10 @@ class Field:
 				output += str(round(self.get(j,i), 3)) + '\t' #Convert each value to string
 			output += '\n' #return carriage evertime we need it
 		return output
+
+	def copy(self):
+		copy = array(self.type, [self.Field[i] for i in range(self.X_size * self.Y_size)] )
+		return copy
 
 	#Method sets the field to a single value
 	def set_all(self, value = 0):
@@ -59,7 +64,7 @@ class Field:
 		return self.Field[xpos + ypos * self.X_size]
 	
 	#Finds the smallest value in a field that is not in the selected field
-	#Selected field consists of 0's for unselected/visited nodes and 1's for visited nodes
+	#Selected field consists of 0's for unselected/visited cells and 1's for visited cells
 	def find_smallest_not_selected(self, selected):
 		smallest = sys.float_info.max   #Initialize this to the maximum
 		x_out = 0
@@ -78,8 +83,10 @@ class Field:
 class Flow_Field:
 	
 	#Initializes the class creates variables used later
-	def __init__(self, X_size = 1, Y_size = 1, goal_x = 0, goal_y = 0):
-		self.Cost		 =   Field(X_size, Y_size, 'f', 10)
+	def __init__(self, X_size = 1, Y_size = 1, goal_x = 0, goal_y = 0, start_cost = 255):
+		self.Cost		 =   Field(X_size, Y_size, 'f', start_cost)
+		#self.temp_Cost		 =   Field(X_size, Y_size, 'f', start_cost)
+		
 		self.Integration  =   Field(X_size, Y_size, 'f', 0)
 		self.Flow		 =   Field(X_size, Y_size, 'I', 0)
 		
@@ -93,7 +100,9 @@ class Flow_Field:
 	def get_heuristic(self, xpos, ypos):
 		return math.sqrt((xpos-self.X_goal)**2 + (ypos-self.Y_goal)**2)
 
-	def get_ID(self, xpos, ypos):
+	def get_ID(self, xpos, ypos = None):
+		if(ypos == None):
+			xpos, ypos = xpos
 		return xpos + self.X_size*ypos
 
 	def get_XY(self, ID):
@@ -101,14 +110,15 @@ class Flow_Field:
 		return (int(xpos), int(((ID) - xpos) / self.X_size))
 
 	def check_in_bounds(self, ID):
-		#if(type(ID) == int):
-		(xpos, ypos) = self.get_XY(ID)
-		#else:
-		#	(xpos, ypos) = ID
-		if(xpos + self.X_size*ypos >= self.X_size*self.Y_size or ypos < 0 or xpos < 0):
+		xpos, ypos = self.get_XY(ID)
+			
+		return self.check_in_XY_Bounds(self, xpos, ypos)
+
+	def check_in_XY_Bounds(self, xpos, ypos):
+		if(xpos >= self.X_size or ypos >= self.Y_size or ypos < 0 or xpos < 0):
 			return -1
 		else:
-			return ID
+			return self.get_ID(xpos, ypos)
 
 	def get_neighbours(self, ID):
 		#if(type(ID) == int):
@@ -116,19 +126,19 @@ class Flow_Field:
 		#else:
 		#	(xpos, ypos) = ID
 			
-		output =[self.get_ID(xpos + 1, ypos), self.get_ID(xpos - 1, ypos), self.get_ID(xpos, ypos + 1), self.get_ID(xpos, ypos - 1), 
-					self.get_ID(xpos + 1, ypos + 1), self.get_ID(xpos + 1, ypos - 1), self.get_ID(xpos - 1, ypos + 1), self.get_ID(xpos +-1, ypos - 1)]
-		for item in output:
-			if(self.check_in_bounds(item) == -1):
-				output.remove(item)
+		output =[self.check_in_XY_Bounds(xpos + 1, ypos), self.check_in_XY_Bounds(xpos - 1, ypos), self.check_in_XY_Bounds(xpos, ypos + 1), self.check_in_XY_Bounds(xpos, ypos - 1), 
+					self.check_in_XY_Bounds(xpos + 1, ypos + 1), self.check_in_XY_Bounds(xpos + 1, ypos - 1), self.check_in_XY_Bounds(xpos - 1, ypos + 1), self.check_in_XY_Bounds(xpos +-1, ypos - 1)]
+		
+		while(-1 in output):
+			output.remove(-1)
+			
+		#print(output)
 		return output
 
-	def calc_integration_2(self):
+	def calc_integration(self):
 		#Set the Integration list to max just like 
 		self.Integration.set_all(sys.float_info.max)
 		self.Integration.set(self.X_goal, self.Y_goal, 0)	
-		
-		rep_stop = []
 		
 		openList = deque();
 		openList.append(self.get_ID(self.X_goal, self.Y_goal))
@@ -143,88 +153,16 @@ class Flow_Field:
 			for i in neighbours:
 				ix, iy = self.get_XY(i)
 				#print(self.get_heuristic(ix, iy))
-				newval = self.Cost.Field[i] + self.Cost.Field[working] + self.get_heuristic(ix, iy)
+				newval = self.Cost.Field[i] + self.Integration.Field[working]# + self.get_heuristic(ix, iy)
 				
-				if(newval < self.Integration.Field[i] and not [i, working] in rep_stop):
+				if newval < self.Integration.Field[i]:
 					#print(newval)
 					#print(self.Integration.Field[i])
 					self.Integration.Field[i] = newval
 					if(not i in openList):
-						rep_stop.append([i, working])
-						print(i)
 						openList.appendleft(i)
 
-
-	#Calculates the integration value using a slight variation of Dijkstra's algorithm to 
-	#Find the path cost of every element in the array to the goal
-	def calc_integration(self):
-		#Visited list keeps track of which nodes have been visited
-		visited = Field(self.X_size, self.Y_size, 'B', 0)
-		
-		#Set the Integration list to max just like 
-		self.Integration.set_all(sys.float_info.max)
-		self.Integration.set(self.X_goal, self.Y_goal, 0)
-
-		#First value is the goal with a distance of 0
-		X_cur = self.X_goal
-		Y_cur = self.Y_goal
-		Dist_cur = 0
-
-		for i in visited.Field:
-			
-			#X stationary Y plus 1 case
-			if(Y_cur < self.Y_size - 1):
-				working = self.Cost.get(X_cur, Y_cur + 1) + 1 + Dist_cur	#Calculates the path cost from the goal to this node
-				if(working <= self.Integration.get(X_cur, Y_cur + 1) + self.get_heuristic(X_cur, Y_cur + 1) and visited.get(X_cur, Y_cur + 1) != 1):   #If this path to the node is less than the other
-					self.Integration.set(X_cur, Y_cur + 1, working) #Set the new Integration path cost to the smaller value
-			
-			#X stationary Y minus 1 case
-			if(Y_cur != 0):
-				working = self.Cost.get(X_cur, Y_cur - 1) + 1 + Dist_cur
-				if(working <= self.Integration.get(X_cur, Y_cur - 1) + self.get_heuristic(X_cur, Y_cur - 1) and visited.get(X_cur, Y_cur - 1) != 1):
-					self.Integration.set(X_cur, Y_cur - 1, working)
-
-			#Y Stationary X plus 1 case
-			if(X_cur < self.Y_size - 1): 
-				working = self.Cost.get(X_cur + 1, Y_cur) + 1 + Dist_cur
-				if(working <= self.Integration.get(X_cur + 1, Y_cur) + self.get_heuristic(X_cur + 1, Y_cur) and visited.get(X_cur + 1, Y_cur) != 1):
-					self.Integration.set(X_cur + 1, Y_cur, working)
-			
-			#Y Stationary X minus 1 case
-			if(X_cur != 0): 
-				working = self.Cost.get(X_cur - 1, Y_cur) + 1 + Dist_cur
-				if(working <= self.Integration.get(X_cur - 1, Y_cur) + self.get_heuristic(X_cur - 1, Y_cur) and visited.get(X_cur - 1, Y_cur) != 1):
-					self.Integration.set(X_cur - 1, Y_cur, working)
-			
-			#X Plus 1 Y Plus 1 case
-			if(X_cur < self.X_size - 1 and Y_cur < self.Y_size - 1):
-				working = self.Cost.get(X_cur + 1, Y_cur + 1) + math.sqrt(2) + Dist_cur
-				if(working <= self.Integration.get(X_cur + 1, Y_cur + 1) + self.get_heuristic(X_cur + 1, Y_cur + 1) and visited.get(X_cur + 1, Y_cur + 1) != 1):
-					self.Integration.set(X_cur + 1, Y_cur + 1, working)
-
-			#X minus 1 Y minus 1 case
-			if(X_cur != 0 and Y_cur != 0):
-				working = self.Cost.get(X_cur - 1, Y_cur - 1) + math.sqrt(2) + Dist_cur
-				if(working <= self.Integration.get(X_cur - 1, Y_cur - 1) + self.get_heuristic(X_cur - 1, Y_cur - 1) and visited.get(X_cur - 1, Y_cur - 1) != 1):
-					self.Integration.set(X_cur - 1, Y_cur - 1, working)
-			
-			#X Plus 1 Y minus 1 case
-			if(X_cur < self.X_size - 1 and Y_cur != 0):
-				working = self.Cost.get(X_cur + 1, Y_cur - 1) + math.sqrt(2) + Dist_cur
-				if(working <= self.Integration.get(X_cur + 1, Y_cur - 1) + self.get_heuristic(X_cur + 1, Y_cur - 1) and visited.get(X_cur + 1, Y_cur - 1) != 1):
-					self.Integration.set(X_cur + 1, Y_cur - 1, working)
-			
-			#X Minus 1 Y Plus 1 case
-			if(Y_cur < self.Y_size - 1 and X_cur != 0):
-				working = self.Cost.get(X_cur - 1, Y_cur + 1) + math.sqrt(2) + Dist_cur
-				if(working <= self.Integration.get(X_cur - 1, Y_cur + 1) + self.get_heuristic(X_cur - 1, Y_cur + 1) and visited.get(X_cur - 1, Y_cur + 1) != 1):
-					self.Integration.set(X_cur - 1, Y_cur + 1, working)
-
-			visited.set(X_cur, Y_cur, 1)
-			[X_cur, Y_cur] = self.Integration.find_smallest_not_selected(visited)
-			Dist_cur = self.Integration.get(X_cur, Y_cur)
-
-	def calc_flow_2(self):
+	def calc_flow(self):
 		for cell in range(self.X_size*self.Y_size):
 			smallest = sys.float_info.max
 			neighbours = self.get_neighbours(cell)
@@ -233,83 +171,6 @@ class Flow_Field:
 				if(self.Integration.Field[neigh] < smallest):
 					smallest = self.Integration.Field[neigh]
 					self.Flow.Field[cell] = neigh
-					
-
-	#Populates the flow field where each node points to the absolute position of the neighboring node with the shortest path length
-	def calc_flow(self):
-		for X_cur in range(self.X_size):
-			for Y_cur in range(self.Y_size):
-				smallest = sys.float_info.max
-				Direction = 0
-
-					#X stationary Y plus 1 case
-				if(Y_cur < self.Y_size - 1):
-					working = self.Integration.get(X_cur, Y_cur + 1) #Finds the neighbour's path cost
-					if(working <= smallest):	#Compares neightbour's path cost to smallest
-						smallest = working  #Sets new smallest
-						self.Flow.set(X_cur, Y_cur, X_cur + (Y_cur + 1)*self.Y_size) #Store the location in the field array of the neighbour
-				
-				#X stationary Y minus 1 case
-				if(Y_cur != 0):
-					working = self.Integration.get(X_cur, Y_cur - 1)
-					if(working <= smallest):
-						smallest = working
-						self.Flow.set(X_cur, Y_cur, X_cur + (Y_cur - 1)*self.Y_size)
-
-				#Y Stationary X plus 1 case
-				if(X_cur < self.Y_size - 1): 
-					working = self.Integration.get(X_cur + 1, Y_cur)
-					if(working <= smallest):
-						smallest = working
-						self.Flow.set(X_cur, Y_cur, X_cur + 1 + (Y_cur)*self.Y_size)
-				
-				#Y Stationary X minus 1 case
-				if(X_cur != 0): 
-					working = self.Integration.get(X_cur - 1, Y_cur)
-					if(working <= smallest):
-						smallest = working
-						self.Flow.set(X_cur, Y_cur, X_cur - 1 + (Y_cur)*self.Y_size)
-				
-				#X Plus 1 Y Plus 1 case
-				if(X_cur < self.X_size - 1 and Y_cur < self.Y_size - 1):
-					working = self.Integration.get(X_cur + 1, Y_cur + 1)
-					if(working <= smallest):
-						smallest = working
-						self.Flow.set(X_cur, Y_cur, X_cur + 1 + (Y_cur + 1)*self.Y_size)
-
-				#X minus 1 Y minus 1 case
-				if(X_cur != 0 and Y_cur != 0):
-					working = self.Integration.get(X_cur - 1, Y_cur - 1)
-					if(working <= smallest):
-						smallest = working
-						self.Flow.set(X_cur, Y_cur, X_cur - 1 + (Y_cur - 1)*self.Y_size)
-				
-				#X Plus 1 Y minus 1 case
-				if(X_cur < self.X_size - 1 and Y_cur != 0):
-					working = self.Integration.get(X_cur + 1, Y_cur - 1)
-					if(working <= smallest):
-						smallest = working
-						self.Flow.set(X_cur, Y_cur, X_cur + 1 + (Y_cur - 1)*self.Y_size)
-				
-				#X Minus 1 Y Plus 1 case
-				if(Y_cur < self.Y_size - 1 and X_cur != 0):
-					working = self.Integration.get(X_cur - 1, Y_cur + 1)
-					if(working <= smallest):
-						smallest = working
-						self.Flow.set(X_cur, Y_cur, X_cur - 1 + (Y_cur + 1)*self.Y_size)
-			
-
-	def calc_move_vec(self, X_start, Y_start):
-		next = self.Flow.get(X_start, Y_start)
-		X_next, Y_next = self.get_XY(next)
-		#X_next = next % self.X_size
-		#Y_Next = next - X_next * self.X_size
-
-		return [X_next, Y_next]
-
-	def render_flow(self):
-		for i in self.Flow:
-			return 0
 
 #Display the aruco markers onto the pigame display
 def pygame_flow_field_display(flow_field):
@@ -324,7 +185,7 @@ def pygame_flow_field_display(flow_field):
 	width, height = pygame.display.get_surface().get_size()
 
 	color_gain = int(255/max(flow_field.Integration.Field))
-	gain = 30
+	gain = 20
 	
 	#Infinite loop to handle drawing new frames of the locations of markers
 		#Clear the display
@@ -355,14 +216,14 @@ def pygame_flow_field_display(flow_field):
 			pygame.draw.line(gameDisplay, (232, 3, 252), (int(X_cur*gain + x_offset), int(Y_cur*gain + y_offset)), (int(Next_X*gain + x_offset), int(Next_Y*gain + y_offset)))
 			pygame.display.update()
 			pygame.event.pump()
-			time.sleep(0.25)
+			time.sleep(0.10)
 		
 	#Update the display with the new images and clear the input
 	while(True):
 		pygame.event.pump()
 	
 #Create the field
-field = Flow_Field(15,15, 4, 4)
+field = Flow_Field(30,30, 4, 4)
 
 #Configure the cost considerations
 field.Cost.set(1,0,5)
@@ -410,13 +271,29 @@ field.Cost.set(6,11,5)
 field.Cost.set(5,11,5)
 field.Cost.set(4,11,5)
 
+
+field.Cost.set(13, 13, 255)
+field.Cost.set(13, 14, 255)
+field.Cost.set(13, 15, 255)
+field.Cost.set(13, 16, 255)
+field.Cost.set(14, 16, 255)
+field.Cost.set(15, 16, 255)
+field.Cost.set(16, 16, 255)
+field.Cost.set(16, 15, 255)
+field.Cost.set(16, 14, 255)
+field.Cost.set(15, 13, 255)
+field.Cost.set(14, 13, 255)
+field.Cost.set(13, 13, 255)
+
+
+
 #Calculate the integration Field
 start = time.time()
-field.calc_integration_2()
+field.calc_integration()
 print("Integratation took: " + str(time.time() - start) + " seconds")
 
 #Calcuate the flow field
-field.calc_flow_2()
+field.calc_flow()
 
 #Display all the fields.
 print(str(field.Cost))
