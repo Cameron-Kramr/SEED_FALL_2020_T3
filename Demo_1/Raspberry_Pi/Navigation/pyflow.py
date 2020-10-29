@@ -153,7 +153,7 @@ class Flow_Field:
 			for i in neighbours:
 				ix, iy = self.get_XY(i)
 				#print(self.get_heuristic(ix, iy))
-				newval = self.Cost.Field[i] + self.Integration.Field[working]# + self.get_heuristic(ix, iy)
+				newval = self.Cost.Field[i] + self.Integration.Field[working]
 				
 				if newval < self.Integration.Field[i]:
 					#print(newval)
@@ -184,7 +184,7 @@ def pygame_flow_field_display(flow_field):
 
 	width, height = pygame.display.get_surface().get_size()
 
-	color_gain = int(255/max(flow_field.Integration.Field))
+	color_gain = (255/max(flow_field.Cost.Field))
 	gain = 20
 	
 	#Infinite loop to handle drawing new frames of the locations of markers
@@ -200,7 +200,8 @@ def pygame_flow_field_display(flow_field):
 			img = font.render(str(flow_field.Cost.get(X_cur,Y_cur)), True, (255, 255, 255))
 			
 			#Draw the circle and blit the text onto the display
-			pygame.draw.circle(gameDisplay, (min(flow_field.Integration.get(X_cur,Y_cur)*color_gain, 255), 50, 0), (int(X_cur*gain + x_offset), int(Y_cur*gain + y_offset)), 10)
+			print(color_gain)
+			pygame.draw.circle(gameDisplay, (min(int(flow_field.Cost.get(X_cur,Y_cur)*color_gain), 255), 50, 0), (int(X_cur*gain + x_offset), int(Y_cur*gain + y_offset)), 10)
 			
 			Next_X = flow_field.Flow.get(X_cur, Y_cur) % flow_field.Y_size
 			Next_Y = flow_field.Y_size - Next_X
@@ -216,88 +217,89 @@ def pygame_flow_field_display(flow_field):
 			pygame.draw.line(gameDisplay, (232, 3, 252), (int(X_cur*gain + x_offset), int(Y_cur*gain + y_offset)), (int(Next_X*gain + x_offset), int(Next_Y*gain + y_offset)))
 			pygame.display.update()
 			pygame.event.pump()
-			time.sleep(0.10)
+			#time.sleep(0.10)
 		
 	#Update the display with the new images and clear the input
 	while(True):
 		pygame.event.pump()
 	
-#Create the field
-field = Flow_Field(30,30, 4, 4)
+	if __name__ == "__main__":
+	#Create the field
+	field = Flow_Field(30,30, 4, 4)
 
-#Configure the cost considerations
-field.Cost.set(1,0,5)
-field.Cost.set(2,0,5)
-field.Cost.set(3,0,5)
-field.Cost.set(4,0,5)
-field.Cost.set(5,0,5)
-field.Cost.set(6,0,5)
-field.Cost.set(7,0,5)
-field.Cost.set(8,0,5)
-field.Cost.set(9,0,5)
-field.Cost.set(4,3,5)
-field.Cost.set(4,4,5)
-field.Cost.set(4,5,5)
-field.Cost.set(4,1,5)
-field.Cost.set(4,2,5)
-field.Cost.set(4,3,5)
-field.Cost.set(4,4,5)
-field.Cost.set(4,5,5)
-field.Cost.set(4,6,5)
-field.Cost.set(4,7,5)
-field.Cost.set(4,8,5)
-field.Cost.set(4,9,5)
-field.Cost.set(4,10,5)
-field.Cost.set(4,11,5)
+	#Configure the cost considerations
+	field.Cost.set(1,0,5)
+	field.Cost.set(2,0,5)
+	field.Cost.set(3,0,5)
+	field.Cost.set(4,0,5)
+	field.Cost.set(5,0,5)
+	field.Cost.set(6,0,5)
+	field.Cost.set(7,0,5)
+	field.Cost.set(8,0,5)
+	field.Cost.set(9,0,5)
+	field.Cost.set(4,3,5)
+	field.Cost.set(4,4,5)
+	field.Cost.set(4,5,5)
+	field.Cost.set(4,1,5)
+	field.Cost.set(4,2,5)
+	field.Cost.set(4,3,5)
+	field.Cost.set(4,4,5)
+	field.Cost.set(4,5,5)
+	field.Cost.set(4,6,5)
+	field.Cost.set(4,7,5)
+	field.Cost.set(4,8,5)
+	field.Cost.set(4,9,5)
+	field.Cost.set(4,10,5)
+	field.Cost.set(4,11,5)
 
-field.Cost.set(9,3,5)
-field.Cost.set(9,4,5)
-field.Cost.set(9,5,5)
-field.Cost.set(9,1,5)
-field.Cost.set(9,2,5)
-field.Cost.set(9,3,5)
-field.Cost.set(9,4,5)
-field.Cost.set(9,5,5)
-field.Cost.set(9,6,5)
-field.Cost.set(9,7,5)
-field.Cost.set(9,8,5)
-field.Cost.set(9,9,5)
-field.Cost.set(9,10,5)
-field.Cost.set(9,11,5)
+	field.Cost.set(9,3,5)
+	field.Cost.set(9,4,5)
+	field.Cost.set(9,5,5)
+	field.Cost.set(9,1,5)
+	field.Cost.set(9,2,5)
+	field.Cost.set(9,3,5)
+	field.Cost.set(9,4,5)
+	field.Cost.set(9,5,5)
+	field.Cost.set(9,6,5)
+	field.Cost.set(9,7,5)
+	field.Cost.set(9,8,5)
+	field.Cost.set(9,9,5)
+	field.Cost.set(9,10,5)
+	field.Cost.set(9,11,5)
 
-field.Cost.set(8,11,5)
-field.Cost.set(7,11,5)
-field.Cost.set(6,11,5)
-field.Cost.set(5,11,5)
-field.Cost.set(4,11,5)
-
-
-field.Cost.set(13, 13, 255)
-field.Cost.set(13, 14, 255)
-field.Cost.set(13, 15, 255)
-field.Cost.set(13, 16, 255)
-field.Cost.set(14, 16, 255)
-field.Cost.set(15, 16, 255)
-field.Cost.set(16, 16, 255)
-field.Cost.set(16, 15, 255)
-field.Cost.set(16, 14, 255)
-field.Cost.set(15, 13, 255)
-field.Cost.set(14, 13, 255)
-field.Cost.set(13, 13, 255)
+	field.Cost.set(8,11,5)
+	field.Cost.set(7,11,5)
+	field.Cost.set(6,11,5)
+	field.Cost.set(5,11,5)
+	field.Cost.set(4,11,5)
 
 
+	field.Cost.set(13, 13, 400)
+	field.Cost.set(13, 14, 400)
+	field.Cost.set(13, 15, 400)
+	field.Cost.set(13, 16, 400)
+	field.Cost.set(14, 16, 400)
+	field.Cost.set(15, 16, 400)
+	field.Cost.set(16, 16, 400)
+	field.Cost.set(16, 15, 400)
+	field.Cost.set(16, 14, 400)
+	field.Cost.set(15, 13, 400)
+	field.Cost.set(14, 13, 400)
+	field.Cost.set(13, 13, 400)
 
-#Calculate the integration Field
-start = time.time()
-field.calc_integration()
-print("Integratation took: " + str(time.time() - start) + " seconds")
 
-#Calcuate the flow field
-field.calc_flow()
 
-#Display all the fields.
-print(str(field.Cost))
-print(str(field.Integration))
-print(str(field.Flow))
+	#Calculate the integration Field
+	start = time.time()
+	field.calc_integration()
+	print("Integratation took: " + str(time.time() - start) + " seconds")
 
-pygame_flow_field_display(field)
+	#Calcuate the flow field
+	field.calc_flow()
+
+	#Display all the fields.
+	print(str(field.Cost))
+	print(str(field.Integration))
+	print(str(field.Flow))
+
+	pygame_flow_field_display(field)
