@@ -5,6 +5,7 @@
 #Computer Vision
 #NOTE, this module requires pygame to be installed in order to run
 #This file contains the subroutines that are used in the aruco marker detection scheme.
+
 import multiprocessing as mp
 from picamera.array import PiRGBArray
 from picamera import PiCamera
