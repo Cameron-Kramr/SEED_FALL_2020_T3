@@ -1,4 +1,4 @@
-//moving the system a dedicated amount of feet (still needs to be tested).
+//moving the system around a circle with a defined radius at a defined angular velocity
 #include <Encoder.h>
 #include "DualMC33926MotorShield.h" //PWm goes from -400 to 400 
 #include <AutoPID.h>
