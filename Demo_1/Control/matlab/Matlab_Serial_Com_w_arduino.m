@@ -16,13 +16,13 @@ display(Velocity);
 end
 fclose(obj);
 %%
-AngleVel_A=str2double(RadVel(1:2:end));
-AngleVel_B=str2double(RadVel(2:2:end));
+Vel_1=str2double(RadVel(1:2:end));
+Vel_2=str2double(RadVel(2:2:end));
+
+r=2.88*0.0254; %radius in meters
+InstantVel_1=(Vel_1)./400;
+InstantVel_2=(Vel_2)./400;
 figure(1)
-plot(AngleVel_A)
+plot(InstantVel_1)
 figure(2)
-plot(AngleVel_B)
-k_A=1;
-sigma_A=100;
-k_B=1;
-sigma_B=100;
+plot(InstantVel_2)
