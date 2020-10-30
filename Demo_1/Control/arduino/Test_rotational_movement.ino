@@ -1,4 +1,4 @@
-//moving the system a dedicated amount of feet (still needs to be tested).
+//Uses positional and velocity control to move the system with differental steering
 #include <Encoder.h>
 #include "DualMC33926MotorShield.h" //PWm goes from -400 to 400 
 #include <AutoPID.h>
