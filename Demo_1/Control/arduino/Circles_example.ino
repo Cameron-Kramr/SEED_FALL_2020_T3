@@ -56,7 +56,7 @@ double r=2.88/12;// Radius of wheel in feet
 double des_X=2;
 double des_Y=1;
 double Radius=1; //Radius of circle 
-double d=(15.25/2)/12; //Distance wheel to center in feet
+double d=(13.15/2)/12; //Distance wheel to center in feet
 double omega=1.25; //angular velocity {Rad/s}
 
 double Time_1=0; // time delay for next interval
@@ -111,7 +111,7 @@ while(millis()> Time_1 + Interval_time)
    
   // Position_PID.run();
     
-   Vel_A_PID.run(); 
+   Vel_A_PID.run(); //run velocity contollers 
    Vel_B_PID.run();
 
 
