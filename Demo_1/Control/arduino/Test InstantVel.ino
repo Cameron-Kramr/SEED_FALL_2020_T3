@@ -22,17 +22,17 @@ double Rad2Prev=0;
 double RadV1=0;
 double RadV2=0;
 //interupt times 
-volatile double interuptTime=0;
+double interuptTime=0;
 
 
-volatile double counter1=0; //coutner for motor 1 and 2 resp.
-volatile double counter2=0;
-volatile double rev1=0;
-volatile double rev2=0;// revolutions made for motor 1 and 2 resp.
-volatile double Rad1=0;
-volatile double Rad2=0;//Rads for motor 1 and 2 resp.
-volatile double RotationalV1=0;
-volatile double RotationalV2=0;
+double counter1=0; //coutner for motor 1 and 2 resp.
+double counter2=0;
+double rev1=0;
+double rev2=0;// revolutions made for motor 1 and 2 resp.
+double Rad1=0;
+double Rad2=0;//Rads for motor 1 and 2 resp.
+double RotationalV1=0;
+double RotationalV2=0;
 
 
 DualMC33926MotorShield md;
@@ -57,18 +57,25 @@ void loop() {
   {
    md.setM1Speed(400); //Full speed for wheel 1 might half
    md.setM2Speed(400); //Full speed for wheel 2 might half
-   counter1=MotorEncoder1.read();
-   counter2=MotorEncoder2.read();  
-   rev1=(counter1)/(64*50);
-   rev2=(counter2)/(64*50);
-   Rad1=rev1*6.2832;
-   Rad2=rev2*6.2832;
-   RadV1=(Rad1-Rad1Prev)/(sampleTime/1000);
-   RadV2=(Rad2-Rad2Prev)/(sampleTime/1000);
-   Serial.println(RadV1); //remove the 100 after testing, used it for easier reading
+    
+   counter1=MotorEncoder1.read(); //gets motor counts of wheel 1
+   counter2=MotorEncoder2.read();  //gets motor counts of wheel 2
+    
+   rev1=(counter1)/(64*50); //Gets current revelution point of wheel 1
+   rev2=(counter2)/(64*50); //Gets current revelution point of wheel 2
+    
+   Rad1=rev1*6.2832; //Gets current radial point of wheel 1
+   Rad2=rev2*6.2832; //Gets current radial point of wheel 2
+    
+   RadV1=(Rad1-Rad1Prev)/(sampleTime/1000); // Computes the rotational velocity of wheel 1
+   RadV2=(Rad2-Rad2Prev)/(sampleTime/1000); // Computes the rotational velocity of wheel 2
+    
+   Serial.println(RadV1); //Sends Radial velocity 
    Serial.println(RadV2);
+    
    Rad1Prev=Rad1;
    Rad2Prev=Rad2;
+    
    RealTime+=sampleTime;
   }
  if(millis()> WheelSpinTime && i==0) //stops the motor from running after we reach whatever value is assigned to WheelSpinTime

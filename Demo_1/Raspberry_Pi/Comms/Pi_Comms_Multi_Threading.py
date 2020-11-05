@@ -7,6 +7,9 @@
 #The code in this file deals with communcicating with other devices outside of the raspberry pi.
 
 import multiprocessing as mp
+import termios
+import os
+import sys
 from enum import Enum
 from enum import IntEnum
 import time
@@ -31,45 +34,90 @@ class ARDU_CMD(IntEnum):
     SEND = 1
     RECEIVE = 2
 
+__ch_set = ['\n']
+
+old_settings=None
+
+def init_anykey():
+   global old_settings
+   old_settings = termios.tcgetattr(sys.stdin)
+   new_settings = termios.tcgetattr(sys.stdin)
+   new_settings[3] = new_settings[3] & ~(termios.ECHO | termios.ICANON) # lflags
+   new_settings[6][termios.VMIN] = 0  # cc
+   new_settings[6][termios.VTIME] = 0 # cc
+   termios.tcsetattr(sys.stdin, termios.TCSADRAIN, new_settings)
+
+def Get_Line():
+    ch = os.read(sys.stdin.fileno(), 1)
+    #print('>', end = '')
+    if(len(__ch_set) != 0):
+       if(__ch_set[-1] == '\n' or __ch_set[-1] == '\r'):
+            __ch_set.clear()
+
+    while ch != None and len(ch) > 0:
+        __ch_set.append(chr(ch[0]))
+        #print(chr(ch[0]), end = '')
+        if(chr(ch[0]) == '\r' or chr(ch[0]) == '\n'):
+            return __ch_set
+        ch = os.read(sys.stdin.fileno(), 1)
+    return None;
 
 #Main Serial handler thread deals with Serial nonsense.
-def Serial_Handler(input_pipe):
+def Serial_Handler(input_pipe, file = '/dev/ttyACM0', baud = 250000):
         #Initialize Serial object
-    ser = serial.Serial('/dev/ttyACM0', 9600)
-    time.sleep(2)                                                          #might need it so 'ser' can work properly
+    ser = serial.Serial(file, baud)
+    FPS = 100
+    data2 = ""
+    Start = time.time()
+    #time.sleep(2)                                                          #might need it so 'ser' can work properly
 
         #Initialize variables
     data = [0,0,0]
-        
+
     while (True):
             #Data shape:
-        #[command, magnitude, angle]
-            
+        #[command, [magnitude, angle]]
+
             #Non-blocking read of pipe waiting for input
-        #if(input_pipe.poll()):
-        data = input_pipe.recv()
-            
+        try:
+            if(input_pipe.poll()):
+                data = input_pipe.recv()
+
+            while(ser.inWaiting()>0):
+                data2 += ser.readline().decode('utf-8')
+                #print("Arduino Data:")
+                #print(data2)
+        except:
+            print("Serial Error")
+
         #print("Looping")
         if(data[0] == ARDU_CMD.SEND):                                         #Clear LCD and send it a string to display
             try:
-                ser.write(data[1].to_bytes(2, 'big'))           #sends magnitude to arduino
-                ser.write(data[2].to_bytes(2, 'big'))           #sends angle to arduino
-                pass
+            #ser.write((' '.join([str(item) for item in data[1]]
+                for i in data[1]:
+                    if(i != '\n'):
+                        ser.write(i.encode())
+                        #print(i)
+                #print("Sent Ardu:" + str(data[1]))
+                    #pass
             except:
-                print("Something's wrong with sending Serial data!")
-            
-        elif(data[0] == ARDU_CMD.RECEIVE):                                      #if we need to get the position from arduino, this if statement
+                print("Something's wrong with sending Serial Data!")
+
+        if(data2 != ""):                                      #if we need to get the position from arduino, this if statement
                                                                             #will do it. Feel free to alter "get_position" to whatever you want.
             try:
-                data2 = ser.readline().decode('utf-8').rstrip()                 #gets data from arduino
+                #data2 = ser.readline().decode('utf-8').rstrip()                 #gets data from arduino
                 input_pipe.send(data2)
-                print(data2)
+                data2 = ""
                 pass
             except:
-                print("Something's wrong with getting Serial data!")
+                print("Something's wrong with getting Serial Data!")
         #Clear data
         data[0] = 0
-        
+        #Frame lock arduino
+        while(time.time() - Start < 1/FPS):
+            pass
+
 
 #Main I2C handler thread deals with I2C nonsense.
 def I2C_Handler(input_pipe, size, address, color = [255, 0, 0]):
@@ -77,7 +125,7 @@ def I2C_Handler(input_pipe, size, address, color = [255, 0, 0]):
     i2c_bus = busio.I2C(board.SCL, board.SDA)
     lcd = character_lcd.Character_LCD_RGB_I2C(i2c_bus, size[1], size[0])
     lcd.clear()
-    
+
     #Initialize SMbus object
     sm_bus = SMBus(1)
 
