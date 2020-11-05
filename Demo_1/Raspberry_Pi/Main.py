@@ -48,8 +48,8 @@ cv2_detect_1.start()
 cv2_detect_2.start()
 cv2_pose.start()
 picam_thread.start()
-PI_I2C.start()
-PI_ARDU.start()
+#PI_I2C.start()
+#PI_ARDU.start()
 
 pcmt.init_anykey()
 
@@ -102,12 +102,12 @@ while(True):
         Ardu_Start = time.time()
         #Send command and data to Arduino thread
         if(terminal_msg != None):
-            ARDU_pipe_1.send([pcmt.ARDU_CMD.SEND, terminal_msg])
+            #ARDU_pipe_1.send([pcmt.ARDU_CMD.SEND, terminal_msg])
             terminal_msg = None
         if(compound and time.time() > compound_start + compound_time):
             print("sending compounding movement")
             compound = False
-            ARDU_pipe_1.send([pcmt.ARDU_CMD.SEND, "1 0"])
+            #ARDU_pipe_1.send([pcmt.ARDU_CMD.SEND, "1 0"])
 
     #Frame lock the LCD information sending because the LCD can't update faster than 1 Hz due to speed limitations
     if(time.time() - LCD_Start_Time >= 1/LCD_FPS and LCD_OUTPUT):
@@ -125,7 +125,7 @@ while(True):
         #print(Message)
 
         #Send the command to print to the LCD and the message to be displayed
-        I2C_pipe_1.send([pcmt.I2C_CMD.LCD_CLR_MSG, Message])
+        #I2C_pipe_1.send([pcmt.I2C_CMD.LCD_CLR_MSG, Message])
 
     #Poll the Serial pipe.
     if(ARDU_pipe_1.poll()):
@@ -143,10 +143,15 @@ while(True):
             print("initiating compound movement")
             compound = True
             compound_start = time.time()
+		if(27 in terminal_msg):
+			break
 
     #Lock FPS to not waste resources
     end_time = time.time()
     time.sleep(max(1/FPS - (end_time - start_time), 0))
 
 
-
+cv2_detect_1.kill()
+cv2_detect_2.kill()
+cv2_pose.kill()
+picam_thread.kill()

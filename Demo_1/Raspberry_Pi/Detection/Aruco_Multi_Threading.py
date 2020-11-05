@@ -74,7 +74,7 @@ def pygame_aruco_display_manager(input_pipe, debug = False):
 		inputs = []
 
 #Estimates the pose/position of a marker from the pipes
-def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False):
+def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False, offset_mat = np.zeros((3))):
 	output = []
 	input = []
 	#count = 0
@@ -92,7 +92,9 @@ def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False
 		#Loop over the inputs received from the pipe
 		for i in inputs:
 			#Find the translation and rotation vectors. Object points less important
-			rvecs, tvecs, _objPoints = cv2.aruco.estimatePoseSingleMarkers(i[1], side_length, cam_mtx,dis_coefs )
+			rvecs, tvecs, _objPoints = cv2.aruco.estimatePoseSingleMarkers(i[1], side_length, cam_mtx, dis_coefs)
+			#Offset can be used to set the center position of the marker within itself, if it is in a cube for example
+			tvecs = tvecs + rvecs@offset_mat 
 			output.append([i[0], rvecs, tvecs])
 		#Send output back to main thread for further processing
 		input_pipe.send(output)
