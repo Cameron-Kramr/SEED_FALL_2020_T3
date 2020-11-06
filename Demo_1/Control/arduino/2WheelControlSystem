@@ -115,7 +115,7 @@ double AngularVelToLinearA(double omega,double Radius, double* Vel_WA, double* V
 double SummingBlock(double Vel_W,double inputVel)
 {
    Vel_S=Vel_W+inputVel;
-   return Vel_W;
+   return Vel_S;
 }
   
 void loop() {
