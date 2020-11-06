@@ -38,12 +38,12 @@ picam_thread = mp.Process(target = amt.picam_image_grabbler, args = (picam_conn2
 py_thread = mp.Process(target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
 cv2_detect_1 = mp.Process(target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,))
 cv2_detect_2 = mp.Process(target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters,))
-cv2_pose = mp.Process(target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.1, cam_mtx, dist_mtx,))
+cv2_pose = mp.Process(target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, False, np.array([0,0,-0.0175]),))
 PI_I2C = mp.Process(target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
 PI_ARDU = mp.Process(target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
 
 #Start All Helper Threads:
-#py_thread.start()
+py_thread.start()
 cv2_detect_1.start()
 cv2_detect_2.start()
 cv2_pose.start()
@@ -89,7 +89,7 @@ while(True):
         poses = cv2_conn1.recv()
 
         #Send poses to pygame thread
-        #pygme_conn1.send(poses)
+        pygme_conn1.send(poses)
 
         #Create the correct rotation matrix from condensed form of the first detected marker
         rot_mtx, jacob = cv2.Rodrigues(poses[0][1][0][0])
@@ -143,8 +143,8 @@ while(True):
             print("initiating compound movement")
             compound = True
             compound_start = time.time()
-		if(27 in terminal_msg):
-			break
+        if(27 in terminal_msg):
+            break
 
     #Lock FPS to not waste resources
     end_time = time.time()
