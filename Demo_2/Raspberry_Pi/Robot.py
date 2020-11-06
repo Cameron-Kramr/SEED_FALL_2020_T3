@@ -6,7 +6,7 @@ import enum
 class Robot_States(enum.Enum):
     START_UP = 0 #State when robot starts up
     MOVE = 1     #State when robot is moving
-    SEARCH = 2   #Search for beacons state
+    LOCATE = 2   #State when robot doesn't know where it is
 
 class Robot:
 	def __init__(self):
