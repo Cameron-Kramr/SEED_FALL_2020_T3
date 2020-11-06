@@ -17,39 +17,7 @@ import cv2
 import Detection.detect_angle as dta
 import Comms.Pi_Comms_Multi_Threading as pcmt
 import math
-
-#Initialize Aruco parameters
-cam_mtx = np.fromfile("Navigation/Camera_Utils/cam_mtx.dat").reshape((3,3))
-dist_mtx = np.fromfile("Navigation/Camera_Utils/dist_mtx.dat")
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_250)
-parameters = cv2.aruco.DetectorParameters_create()
-
-#Initiate Multiprocessing Pipes used for interconnecting the threads
-cv2_conn1, cv2_conn2 = mp.Pipe(duplex = True)
-pygme_conn1, pygme_conn2 = mp.Pipe(duplex = True)
-cv2_aruco_1_conn1, cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
-cv2_aruco_2_conn1, cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
-picam_conn1, picam_conn2 = mp.Pipe(duplex = True)
-I2C_pipe_1, I2C_pipe_2 = mp.Pipe(duplex = True)
-ARDU_pipe_1, ARDU_pipe_2 = mp.Pipe(duplex = True)
-
-#Create Multiprocessing Objects
-picam_thread = mp.Process(target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640, 480), 60,))
-py_thread = mp.Process(target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
-cv2_detect_1 = mp.Process(target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,))
-cv2_detect_2 = mp.Process(target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters,))
-cv2_pose = mp.Process(target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, False, np.array([0,0,-0.0175]),))
-PI_I2C = mp.Process(target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
-PI_ARDU = mp.Process(target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
-
-#Start All Helper Threads:
-py_thread.start()
-cv2_detect_1.start()
-cv2_detect_2.start()
-cv2_pose.start()
-picam_thread.start()
-#PI_I2C.start()
-#PI_ARDU.start()
+import Robot.py
 
 pcmt.init_anykey()
 
@@ -149,9 +117,3 @@ while(True):
     #Lock FPS to not waste resources
     end_time = time.time()
     time.sleep(max(1/FPS - (end_time - start_time), 0))
-
-
-cv2_detect_1.kill()
-cv2_detect_2.kill()
-cv2_pose.kill()
-picam_thread.kill()

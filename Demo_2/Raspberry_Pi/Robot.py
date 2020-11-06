@@ -1,14 +1,32 @@
+#Cameron Kramr
+#11/06/2020
+#EENG 350
+#Section A
+#Computer Vision
+#NOTE, this module requires pygame to be installed in order to run
+#This file implements the robot class which stores, and implements robot code
+
+import sys
+import numpy as np
 import multiprocessing as mp
+import picamera
+import Detection.Aruco_Multi_Threading as amt
 import time
+import cv2
+import Detection.detect_angle as dta
+import Comms.Pi_Comms_Multi_Threading as pcmt
+import math
 import Navigation.GPS.GPS as GPS
 import enum
 
 class Robot_States(enum.Enum):
     START_UP = 0 #State when robot starts up
     MOVE = 1     #State when robot is moving
-    LOCATE = 2   #State when robot doesn't know where it is
+    SEARCH = 2   #Search for beacons state
 
 class Robot:
+
+######################### Initializer functions ##################
 	def __init__(self):
         self.Update_FPS = 60
         self.Start_Time = time.time()
@@ -17,7 +35,8 @@ class Robot:
         self.GPS = GPS.GPS_System();
 
 		self.Threads = {}		#container for all threading objects generated
-		self.Parameters = {}	#Dictionary for all parameters that will be used by updater functions
+		self.Pipes = {}	        #Dictionary for all pipes that will be used by updater functions
+        self.Pipe_Updaters = {} #Dictionary of all the updater functions for all the pipes
 
         self.State = Robot_States.START_UP
 
@@ -30,13 +49,13 @@ class Robot:
         parameters = cv2.aruco.DetectorParameters_create()
 
     #Initiate Multiprocessing Pipes used for interconnecting the threads
-        self.cv2_conn1, cv2_conn2 = mp.Pipe(duplex = True)
-        self.pygme_conn1, pygme_conn2 = mp.Pipe(duplex = True)
-        self.cv2_aruco_1_conn1, cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
-        self.cv2_aruco_2_conn1, cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
-        self.picam_conn1, picam_conn2 = mp.Pipe(duplex = True)
-        self.I2C_pipe_1, I2C_pipe_2 = mp.Pipe(duplex = True)
-        self.ARDU_pipe_1, ARDU_pipe_2 = mp.Pipe(duplex = True)
+        self.Pipes["cv2_conn1"], cv2_conn2 = mp.Pipe(duplex = True)
+        self.Pipes["pygme_conn1"], pygme_conn2 = mp.Pipe(duplex = True)
+        self.Pipes["cv2_aruco_1_conn1"], cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
+        self.Pipes["cv2_aruco_2_conn1"], cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
+        self.Pipes["picam_conn1"], picam_conn2 = mp.Pipe(duplex = True)
+        self.Pipes["I2C_pipe_1"], I2C_pipe_2 = mp.Pipe(duplex = True)
+        self.Pipes["ARDU_pipe_1"], ARDU_pipe_2 = mp.Pipe(duplex = True)
 
     #Create Multiprocessing Objects
         self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60,))
@@ -47,6 +66,7 @@ class Robot:
         self.add_Thread("PI_I2C", target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
         self.add_Thread("PI_ARDU", target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
 
+###################### Timing related functions ###################
     #Sets the start time
     def set_Start(self):
         self.Start_Time = time.time()
@@ -68,7 +88,7 @@ class Robot:
         if self.check_Time():
             print(self.calc_FPS())
 
-################### Multi Threading Utilities
+################### Multi Threading Utilities #######################
 	def add_Thread(self, ID, target, args):
         self.Threads[ID] = mp.Process(target = target, args = args)
 
@@ -92,3 +112,15 @@ class Robot:
     def start_All_Threads(self):
             for i in self.Threads:
                 i.start()
+
+######################### Updater Related Functions ###################
+
+    #Checks all the pipes and runs their updater if information is available
+    def update_pipes()
+        for iter, item in enumerate(self.Pipes):
+            if(iter in self.Pipe_Updaters):
+                if item.poll():
+                    self.Pipe_Updaters[iter](self)
+            else:
+                item.recv()
+                #If item does not have a pipe updater, we'll want to clear the pipe so it doesn't fill up
