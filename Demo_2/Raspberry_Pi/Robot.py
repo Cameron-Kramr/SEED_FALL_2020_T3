@@ -6,65 +6,46 @@
 #NOTE, this module requires pygame to be installed in order to run
 #This file implements the robot class which stores, and implements robot code
 
+#Standard Modules
 import sys
 import numpy as np
 import multiprocessing as mp
-import picamera
-import Detection.Aruco_Multi_Threading as amt
-import time
-import cv2
-import Detection.detect_angle as dta
-import Comms.Pi_Comms_Multi_Threading as pcmt
 import math
 import Navigation.GPS.GPS as GPS
 import enum
+import time
+import Module
 
+import Modules.Ardu_Handler as adh
+import Modules.I2C_Handler as i2ch
+import Modules.CV_Handler as cvh
+
+'''
+#Raspberry Pi Modules
+import picamera
+import Detection.Aruco_Multi_Threading as amt
+import cv2
+import Comms.Pi_Comms_Multi_Threading as pcmt
+import Detection.detect_angle as dta
+'''
 class Robot_States(enum.Enum):
     START_UP = 0 #State when robot starts up
     MOVE = 1     #State when robot is moving
     SEARCH = 2   #Search for beacons state
 
-class Robot:
-
-######################### Initializer functions ##################
-	def __init__(self):
+###############     Robot Class Definition      ####################
+class Robot():
+    def __init__(self):
         self.Update_FPS = 60
         self.Start_Time = time.time()
         self.End_Time = time.time()
 
         self.GPS = GPS.GPS_System();
 
-		self.Threads = {}		#container for all threading objects generated
-		self.Pipes = {}	        #Dictionary for all pipes that will be used by updater functions
-        self.Pipe_Updaters = {} #Dictionary of all the updater functions for all the pipes
-
+        self.Threads = {}        #container for all threading objects generated
+        self.Modules = {}            #Dictionary for all pipes that will be used by updater functions
+        
         self.State = Robot_States.START_UP
-
-    #Overridable initialization function to provide customization to code
-    def initialize(self):
-        #Initialize Aruco parameters
-        cam_mtx = np.fromfile("Navigation/Camera_Utils/cam_mtx.dat").reshape((3,3))
-        dist_mtx = np.fromfile("Navigation/Camera_Utils/dist_mtx.dat")
-        aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_250)
-        parameters = cv2.aruco.DetectorParameters_create()
-
-    #Initiate Multiprocessing Pipes used for interconnecting the threads
-        self.Pipes["cv2_conn1"], cv2_conn2 = mp.Pipe(duplex = True)
-        self.Pipes["pygme_conn1"], pygme_conn2 = mp.Pipe(duplex = True)
-        self.Pipes["cv2_aruco_1_conn1"], cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
-        self.Pipes["cv2_aruco_2_conn1"], cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
-        self.Pipes["picam_conn1"], picam_conn2 = mp.Pipe(duplex = True)
-        self.Pipes["I2C_pipe_1"], I2C_pipe_2 = mp.Pipe(duplex = True)
-        self.Pipes["ARDU_pipe_1"], ARDU_pipe_2 = mp.Pipe(duplex = True)
-
-    #Create Multiprocessing Objects
-        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60,))
-        self.add_Thread("PY_GAME", target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
-        self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,))
-        self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters,))
-        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, False, np.array([0,0,-0.0175]),))
-        self.add_Thread("PI_I2C", target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
-        self.add_Thread("PI_ARDU", target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
 
 ###################### Timing related functions ###################
     #Sets the start time
@@ -89,7 +70,7 @@ class Robot:
             print(self.calc_FPS())
 
 ################### Multi Threading Utilities #######################
-	def add_Thread(self, ID, target, args):
+    def add_Thread(self, ID, target, args):
         self.Threads[ID] = mp.Process(target = target, args = args)
 
     def kill_Thread(self, ID):
@@ -97,30 +78,74 @@ class Robot:
 
     def kill_All_Threads(self):
         for i in self.Threads:
-            i.kill()
+            self.Threads[i].kill()
 
     def close_Thread(self, ID):
             self.Threads[ID].close()
 
     def close_All_Threads(self, ID):
             for i in self.Threads:
-                i.close()
+                self.Threads[i].close()
 
     def start_Thread(self, ID):
         self.Threads[ID].start()
 
     def start_All_Threads(self):
             for i in self.Threads:
-                i.start()
+                self.Threads[i].start()
 
 ######################### Updater Related Functions ###################
 
-    #Checks all the pipes and runs their updater if information is available
-    def update_pipes()
-        for iter, item in enumerate(self.Pipes):
-            if(iter in self.Pipe_Updaters):
-                if item.poll():
-                    self.Pipe_Updaters[iter](self)
-            else:
-                item.recv()
-                #If item does not have a pipe updater, we'll want to clear the pipe so it doesn't fill up
+    #Updates all modules sending the robot handle for all global variables
+    def update_modules(self):
+        for i in self.Modules:
+            self.Modules[i].update(self)
+
+    #Adds modules to the module list
+    def add_Module(self, ID, module):
+        if(issubclass(module, module.module)):
+            self.Modules[ID] = module
+            self.Modules[ID].ID = ID
+
+
+####################### Applicaiton specific robot derivative class ################################
+class Demo_2_Robot(Robot):
+    def __init__(self):
+        Robot.__init__(self)
+#Overridable initialization function to provide customization to code
+        #Initialize Aruco parameters
+        cam_mtx = np.fromfile("Detetction/Camera_Utils/cam_mtx.dat").reshape((3,3))
+        dist_mtx = np.fromfile("Detetction/Camera_Utils/dist_mtx.dat")
+        aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_250)
+        parameters = cv2.aruco.DetectorParameters_create()
+
+    #Initiate Multiprocessing Pipes used for interconnecting the threads
+        cv2_conn1, cv2_conn2 = mp.Pipe(duplex = True)
+        pygme_conn1, pygme_conn2 = mp.Pipe(duplex = True)
+        cv2_aruco_1_conn1, cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
+        cv2_aruco_2_conn1, cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
+        picam_conn1, picam_conn2 = mp.Pipe(duplex = True)
+        I2C_pipe_1, I2C_pipe_2 = mp.Pipe(duplex = True)
+        ARDU_pipe_1, ARDU_pipe_2 = mp.Pipe(duplex = True)
+
+    #Create Multiprocessing Objects
+        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60,))
+        self.add_Thread("PY_GAME", target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
+        self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,))
+        self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters,))
+        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, False, np.array([0,0,-0.0175]),))
+        self.add_Thread("PI_I2C", target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
+        self.add_Thread("PI_ARDU", target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
+
+    #Create appropriate modules for handling thread interactions
+        self.add_Module("PI_ARDU", adh.ARDU_Handler(self, ARDU_pipe_1))
+        self.add_Module("PI_I2C", i2ch.I2C_Handler(self, I2C_pipe_1))
+        
+        side_length = 0.025
+        offset_mat = np.array((0,0,-0.0175))
+        
+        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn2, cv2_aruco_2_conn2], [cv2_conn2], side_length, cam_mtx, dis_coefs, offset_mat))
+
+
+if __name__ == "__main__":
+    bob = Demo_2_Robot()

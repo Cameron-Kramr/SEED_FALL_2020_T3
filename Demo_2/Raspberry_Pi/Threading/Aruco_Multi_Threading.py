@@ -97,8 +97,6 @@ def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False
             
             dst, _ = cv2.Rodrigues(rvecs)
 
-            print(dst@offset_mat)
-            print("**************")
             tvecs = tvecs + dst@offset_mat
             output.append([i[0], rvecs, tvecs])
         #Send output back to main thread for further processing
