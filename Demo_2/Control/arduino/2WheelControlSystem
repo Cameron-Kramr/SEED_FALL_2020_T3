@@ -1,4 +1,5 @@
-//Still need to edit the functions
+//Arduino code used to control the velocity of each wheel with inputs of radius desired angular velocity and desired linear velocity
+//Need to fix the way wheel 1 turns for slightly longer than wheel 1 when PWM angular velocity input with a radius present (Works when not going around a fixed point) 
 #include <Encoder.h>
 #include "DualMC33926MotorShield.h" //PWm goes from -400 to 400 
 #include <AutoPID.h>
@@ -12,16 +13,16 @@
 #define nSF 12 //Status flag
 
 
-#define kp_A (7.80106264935576)     //Wheel 2 velocity por. gain
+#define kp_A (73.0428513998549)     //Wheel 2 velocity por. gain
 #define kd_A (0)  //Wheel 2 velocity dif. gain
-#define ki_A (91.4752606263456)   //Wheel 2 velocity int. gain
+#define ki_A (485.004533295037)   //Wheel 2 velocity int. gain
 
-#define kp_B (8.0959852388045)   //Wheel 2 velocity por. gain
+#define kp_B (78.2653741143277)   //Wheel 2 velocity por. gain
 #define kd_B (0) //Wheel 2 velocity dif. gain
-#define ki_B (100.851688119788)   //Wheel 2 velocity int. gain
+#define ki_B (557.249463694013)   //Wheel 2 velocity int. gain
 
-Encoder MotorEncoder1(2,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
-Encoder MotorEncoder2(3,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+Encoder MotorEncoder1(2,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
+Encoder MotorEncoder2(3,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 
 double counter1=0; //counter for motor 1 and 2 resp.
 double counter2=0;
@@ -50,19 +51,19 @@ double setpoint_A=0; //Wanted wheel 1 velocity
 double setpoint_B=0; //Wanted wheel 2 velocity
 
 double r=2.88/12;// Radius of wheel in feet
-double des_Rad=3.14*2;
 double Radius=1; //Radius of circle 
 double d=(13.15/2)/12; //Distance wheel to center in feet
-double omega=1; //angle {Rad}
+double omega=.75; //angle {Rad}
 
 double Time_1=0; // time delay for next interval
 double Interval_time=5;//sample interval time =5ms
-double *Time=0;
+double Time=0;
 
 
 //function
 double Vel=0;
-double count=0;
+double count1=0;
+double count2=0;
 double rev=0;
 double Rad=0;
 
@@ -83,19 +84,25 @@ void setup() {
    pinMode(nSF,INPUT);     
    motor_shield.init(); 
    Serial.begin (250000);//baud rate set to 250000
-   Vel_A_PID.setTimeStep(110);
-   Vel_B_PID.setTimeStep(110);
+   Vel_A_PID.setTimeStep(Interval_time);
+   
+   Vel_B_PID.setTimeStep(Interval_time);
 }
 
-double CountsToRad(double count, double* Rad)
+double CountsToRad(double count1,double count2,double* RadA, double* RadB)
 {
-   rev=(count)/(64*50); // Get revolutions made for the motor 
-   *Rad=rev*6.2832; // Get radians made for the motor 
+   rev=(count1)/(64*50); // Get revolutions made for the motor 
+   *RadA=rev*6.2832; // Get radians made for the motor 
+   rev=(count2)/(64*50); // Get revolutions made for the motor 
+   *RadB=rev*6.2832; // Get radians made for the motor 
+   return;
 }
   
-double RadToVel (double Rad, double RadPrev, double Time, double* Vel)
+double RadToVel (double RadA,double RadB, double RadAPrev, double RadBPrev, double Interval_time, double* Vel_A, double* Vel_B)
 {
-  *Vel=(Rad-RadPrev)/(Time*1000);
+  *Vel_A=((RadA-RadAPrev)/(Interval_time/1000))*(2.88/12);
+  *Vel_B=((RadB-RadBPrev)/(Interval_time/1000))*(2.88/12);
+  return;
 }
   
 double AngularVelToLinearA(double omega,double Radius, double* Vel_WA, double* Vel_WB)
@@ -109,7 +116,7 @@ double AngularVelToLinearA(double omega,double Radius, double* Vel_WA, double* V
     *Vel_WA=omega*(Radius-d);
     *Vel_WB=omega*(Radius+d);
       }
-
+return;
 }
   
 double SummingBlock(double Vel_W,double inputVel)
@@ -121,21 +128,24 @@ double SummingBlock(double Vel_W,double inputVel)
 void loop() {
   while(millis()> Time_1 + Interval_time)
   {
-     counter1=MotorEncoder1.read(); //get motor counts for motor 1
+     if(Time_1>=5000)
+     {
+      omega=0;
+      }
+     counter1=-1*MotorEncoder1.read(); //get motor counts for motor 1 multiplied by -1 because the counts were backwards
      counter2=MotorEncoder2.read();  //get motor counts for motor 2
      
       //finiding radial positon of each wheel 
-     CountsToRad(counter1,&RadA);
-     CountsToRad(counter2,&RadB);
+     CountsToRad(counter1,counter2,&RadA,&RadB);
   
      // Finding linear velocity from the radial position of each wheel 
-      RadToVel(RadA,RadAPrev,Interval_time,&Vel_A);
-      RadToVel(RadB,RadBPrev,Interval_time,&Vel_B);
+      RadToVel(RadA,RadB,RadAPrev,RadBPrev,Interval_time,&Vel_A,&Vel_B);
+     // RadToVel(RadB,RadBPrev,Interval_time,&Vel_B);
   
      //Angular velocity input converted to linear velocity of each wheel
      AngularVelToLinearA(omega,Radius,&Vel_WA,&Vel_WB);
      
-     //Summing block   
+     //Summing block to set setpoint for wheel velocity control   
      setpoint_A=SummingBlock(Vel_WA,inputVel);
      setpoint_B=SummingBlock(Vel_WB,inputVel);
   
@@ -145,10 +155,20 @@ void loop() {
   
      motor_shield.setM1Speed(output_A);
      motor_shield.setM2Speed(output_B);
-     
-     Serial.println(Vel_A);
-     Serial.println(Vel_B);
-     
+
+    Serial.print(output_A);
+    Serial.print('\t');
+    Serial.println(output_B);
+   /*
+    Serial.print('\t'); 
+    Serial.print((RadA-RadAPrev)/(Interval_time*1000*(2.88/12)));
+    Serial.print('\t');
+    Serial.print((RadB-RadBPrev)/(Interval_time/1000*(2.88/12)));
+    Serial.print('\t');
+    Serial.print(counter1);
+    Serial.print('\t');
+    Serial.println(counter2);
+    */
      RadAPrev=RadA;
      RadBPrev=RadB;
   
