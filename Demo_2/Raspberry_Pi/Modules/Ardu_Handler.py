@@ -1,7 +1,7 @@
-import Module
+from Modules.Module import module
 from collections import deque
 
-class ARDU_Handler(Module.module):
+class ARDU_Handler(module):
     def __init__(self, args, pipe, ID = None):
         module.__init__(self, ID)
         self.Frame_Locked = True

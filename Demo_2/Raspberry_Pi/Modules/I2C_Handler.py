@@ -1,7 +1,7 @@
-import Module
+from Modules.Module import module
 from collections import deque
 
-class I2C_Handler(Module.module):
+class I2C_Handler(module):
     def __init__(self, args, pipe, ID = None):
         module.__init__(self, ID)
         self.Frame_Locked = True
@@ -14,8 +14,10 @@ class I2C_Handler(Module.module):
         
         #Send off any arduino data that is present in the ARDU_Outgoing_Messages buffer deque
         try:
-            if(args.I2C_MSSG != None):
-                self.pipe.send(args.I2C_MSSG.popleft())
-                args.I2C_MSSG = None
+            if(len(args.I2C_MSSG) != 0):
+                #print("Sending Pipe: " + args.I2C_MSSG)
+                while(len(args.I2C_MSSG)):
+                    msg = args.I2C_MSSG.popleft()
+                self.pipe.send(msg)
         except:
             args.I2C_MSSG = deque()

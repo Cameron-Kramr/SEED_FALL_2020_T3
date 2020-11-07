@@ -11,23 +11,25 @@ import sys
 import numpy as np
 import multiprocessing as mp
 import math
-import Navigation.GPS.GPS as GPS
 import enum
 import time
-import Module
+import Modules.Module
+
+import GPS.GPS as GPS
 
 import Modules.Ardu_Handler as adh
 import Modules.I2C_Handler as i2ch
 import Modules.CV_Handler as cvh
+import Modules.detect_angle as dta
 
-'''
+import Threading.Pi_Comms_Multi_Threading as pcmt
+import Threading.Aruco_Multi_Threading as amt
+
 #Raspberry Pi Modules
 import picamera
-import Detection.Aruco_Multi_Threading as amt
 import cv2
-import Comms.Pi_Comms_Multi_Threading as pcmt
-import Detection.detect_angle as dta
-'''
+
+
 class Robot_States(enum.Enum):
     START_UP = 0 #State when robot starts up
     MOVE = 1     #State when robot is moving
@@ -44,7 +46,6 @@ class Robot():
 
         self.Threads = {}        #container for all threading objects generated
         self.Modules = {}            #Dictionary for all pipes that will be used by updater functions
-        
         self.State = Robot_States.START_UP
 
 ###################### Timing related functions ###################
@@ -97,15 +98,19 @@ class Robot():
 ######################### Updater Related Functions ###################
 
     #Updates all modules sending the robot handle for all global variables
-    def update_modules(self):
+    def update_Modules(self):
         for i in self.Modules:
+            #print("Updating: " + str(self.Modules[i].ID))
             self.Modules[i].update(self)
+            #print(self.Modules[i].calc_FPS())
+    #Updates a single module
+    def update_Module(self, ID):
+        self.Modules[ID].update(self)
 
     #Adds modules to the module list
     def add_Module(self, ID, module):
-        if(issubclass(module, module.module)):
-            self.Modules[ID] = module
-            self.Modules[ID].ID = ID
+        self.Modules[ID] = module
+        self.Modules[ID].ID = ID
 
 
 ####################### Applicaiton specific robot derivative class ################################
@@ -114,8 +119,8 @@ class Demo_2_Robot(Robot):
         Robot.__init__(self)
 #Overridable initialization function to provide customization to code
         #Initialize Aruco parameters
-        cam_mtx = np.fromfile("Detetction/Camera_Utils/cam_mtx.dat").reshape((3,3))
-        dist_mtx = np.fromfile("Detetction/Camera_Utils/dist_mtx.dat")
+        cam_mtx = np.fromfile("Modules/Camera_Utils/cam_mtx.dat").reshape((3,3))
+        dist_mtx = np.fromfile("Modules/Camera_Utils/dist_mtx.dat")
         aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_7X7_250)
         parameters = cv2.aruco.DetectorParameters_create()
 
@@ -129,22 +134,22 @@ class Demo_2_Robot(Robot):
         ARDU_pipe_1, ARDU_pipe_2 = mp.Pipe(duplex = True)
 
     #Create Multiprocessing Objects
-        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60,))
+        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60, True,))
         self.add_Thread("PY_GAME", target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
-        self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,))
-        self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters,))
-        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, False, np.array([0,0,-0.0175]),))
+        self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,True,))
+        self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters, True,))
+        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, True, np.array([0,0,-0.0175]),))
         self.add_Thread("PI_I2C", target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
         self.add_Thread("PI_ARDU", target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
 
     #Create appropriate modules for handling thread interactions
         self.add_Module("PI_ARDU", adh.ARDU_Handler(self, ARDU_pipe_1))
         self.add_Module("PI_I2C", i2ch.I2C_Handler(self, I2C_pipe_1))
-        
+
         side_length = 0.025
         offset_mat = np.array((0,0,-0.0175))
-        
-        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn2, cv2_aruco_2_conn2], [cv2_conn2], side_length, cam_mtx, dis_coefs, offset_mat))
+
+        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], cv2_conn1, [pygme_conn1]))
 
 
 if __name__ == "__main__":

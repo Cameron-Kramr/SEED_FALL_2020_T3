@@ -54,7 +54,7 @@ def pygame_aruco_display_manager(input_pipe, debug = False):
             #print("Pygame processing: " + str(i[0]))
             #create text image for showing the marker ID
             img = font.render("ID: " + str(i[0][0]), True, (255, 0, 0))
-            
+
             #Find the position the marker should appear on the display
             px = int(i[2][0][0][0] * gain + width/2)
             py = int(height - i[2][0][0][2] * gain)
@@ -88,23 +88,23 @@ def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False
 
         #Record the start time
         start_time = time.time()
-        
+
         #Loop over the inputs received from the pipe
         for i in inputs:
             #Find the translation and rotation vectors. Object points less important
             rvecs, tvecs, _objPoints = cv2.aruco.estimatePoseSingleMarkers(i[1], side_length, cam_mtx, dis_coefs)
             #Offset can be used to set the center position of the marker within itself, if it is in a cube for example
-            
+
             dst, _ = cv2.Rodrigues(rvecs)
 
             tvecs = tvecs + dst@offset_mat
             output.append([i[0], rvecs, tvecs])
         #Send output back to main thread for further processing
         input_pipe.send(output)
-        
+
         #Clear output
         output = []
-        
+
         #Record end time and print out if in debugging mode
         end_time = time.time()
         if(debug):
@@ -129,7 +129,13 @@ def cv2_detect_aruco_routine(input_pipe, aruco_dict, parameters, debug = False):
         if(debug):
             print("CV2 grab Frame FPS: " + str(int(calc_fps(frame_grab_start, frame_grab_end))))
         #Find the aruco markers
+        frame_det_start = time.time()
         corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame_grey, aruco_dict, parameters = parameters)
+        frame_det_end = time.time()
+
+        if(debug):
+            print("CV2 Detect FPS: " + str(int(calc_fps(frame_det_start, frame_det_end))))
+
 
         #if any are present, send the data out
         if(len(corners) != 0):
@@ -138,11 +144,13 @@ def cv2_detect_aruco_routine(input_pipe, aruco_dict, parameters, debug = False):
             input_pipe.send(output)
 
 #Grabblers the images and stuffs them into appropriate pipes
-def picam_image_grabbler(inputpipe, image_pipes, resolution, frame_rate, format = "bgr"):
+def picam_image_grabbler(inputpipe, image_pipes, resolution, frame_rate, debug = False, format = "bgr"):
     #Pi camera setup
     camera = PiCamera()
     camera.resolution = resolution
     camera.framerate = frame_rate
+    camera.ISO = 1600
+    camera.sensor_mode = 7
 
     rawCapture = PiRGBArray(camera, size = resolution)
     #If there is only one pipe, make it into an array to not break future code
@@ -155,10 +163,15 @@ def picam_image_grabbler(inputpipe, image_pipes, resolution, frame_rate, format 
     #Capture the frames continuously from the camera
     for frame in camera.capture_continuous(rawCapture, format = format, use_video_port = True):
         #print("Grabbled Frame!")
-        
         #send image down appropriate pipes
+        start_time = time.time()
         image_pipes[output_counter].send(frame.array)
         output_counter += 1
+
+        if(debug):
+            #cv2.imshow("Image", frame.array)
+            #key = cv2.waitKey(1)
+            print("Grabbled at: " + str(int(calc_fps(start_time, time.time()))))
 
         #Clear the pipe counter if necessary
         if(output_counter >= out_pipe_count):

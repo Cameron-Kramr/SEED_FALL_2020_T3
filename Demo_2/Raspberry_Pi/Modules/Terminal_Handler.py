@@ -1,5 +1,5 @@
 import curses
-import Module
+from Modules.Module import module
 
 __ch_set = ['\n']
 old_settings=None

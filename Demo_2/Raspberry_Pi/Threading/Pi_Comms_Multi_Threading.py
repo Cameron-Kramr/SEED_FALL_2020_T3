@@ -24,7 +24,7 @@ import ctypes
 #import spidev
 
 #Create the valid commands for controlling thread operation
-class I2C_CMD(Enum):
+class I2C_CMD(IntEnum):
     LCD_CLR_MSG = 1
     WRITE_ARDU = 2
     FETCH_ANGLE = 3
@@ -110,7 +110,7 @@ def I2C_Handler(input_pipe, size, address, color = [255, 0, 0]):
     #Initialize LCD screen
     lcd.clear()
     lcd.color = color
-    lcd.message = "Init LCD Handler Done"
+    lcd.message = "Init LCD Handler Done ;)"
 
     while(True):
         #Record time
