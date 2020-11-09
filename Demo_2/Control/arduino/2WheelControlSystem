@@ -73,8 +73,8 @@ double Rad=0;
 
 //Initialize PID class variables
 
-AutoPID Vel_A_PID(&Vel_A,&setpoint_A,&output_A,-200,200,kp_A,ki_A,kd_A);
-AutoPID Vel_B_PID(&Vel_B,&setpoint_B,&output_B,-200,200,kp_B,ki_B,kd_B);
+AutoPID Vel_A_PID(&Vel_A,&setpoint_A,&output_A,-300,300,kp_A,ki_A,kd_A);
+AutoPID Vel_B_PID(&Vel_B,&setpoint_B,&output_B,-300,300,kp_B,ki_B,kd_B);
 
 DualMC33926MotorShield motor_shield;
 
