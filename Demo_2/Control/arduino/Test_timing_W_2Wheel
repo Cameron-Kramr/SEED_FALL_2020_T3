@@ -12,13 +12,13 @@
 #define nSF 12 //Status flag
 
 
-#define kp_A (73.0428513998549)     //Wheel 2 velocity por. gain
+#define kp_A (46.2979731521748)     //Wheel 2 velocity por. gain
 #define kd_A (0)  //Wheel 2 velocity dif. gain
-#define ki_A (485.004533295037)   //Wheel 2 velocity int. gain
+#define ki_A (461.590792327183)   //Wheel 2 velocity int. gain
 
-#define kp_B (78.2653741143277)   //Wheel 2 velocity por. gain
+#define kp_B (46.6050777553275)   //Wheel 2 velocity por. gain
 #define kd_B (0) //Wheel 2 velocity dif. gain
-#define ki_B (557.249463694013)   //Wheel 2 velocity int. gain
+#define ki_B (515.918210751475)   //Wheel 2 velocity int. gain
 
 Encoder MotorEncoder1(2,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 Encoder MotorEncoder2(3,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
@@ -51,7 +51,7 @@ double setpoint_B=0; //Wanted wheel 2 velocity
 
 //User-defined parameters needed for the operation 
 double Radius=0; //Radius of circle 
-double omega=.95; //anglular velocity desired
+double omega=1.25; //anglular velocity desired
 double inputVel=0; //linear velocity desired
 
 //Robot defined parameters
@@ -135,11 +135,39 @@ double SummingBlock(double Vel_W,double inputVel)
 void loop() {
   while(millis()> Time_1 + Interval_time)
   {
-     if(Time_1>=6000)
-     {
+     if(Time_1>=5350)//spin around 360  deg and wait 2 seconds
+      {
       omega=0;
-      }
       
+      }
+       if(Time_1>=7000) //move forward 2 feet i think need to double check
+      {
+        inputVel=1.25;
+      
+      }
+      if(Time_1>=9000)//reach 2.2 feet and stop for 2 seconds
+      {
+      inputVel=0;
+      }
+      if(Time_1>=11000) //rotate 90 deg after waiting 2 seconds 
+      {
+        omega=1;
+        Radius=0;
+      }
+      if(Time_1>=12830)//wait and stop rotation
+      {
+          omega=0;
+      }
+       if(Time_1>=15000)//rotate around object with a radius of 1+d
+      {
+      omega=1;
+      Radius=1.5;
+      }
+      if(Time_1>=21500)
+      {
+      omega=0;
+      Radius=1;
+      }
      counter1=-1*MotorEncoder1.read(); //get motor counts for motor 1 multiplied by -1 because the counts were backwards
      counter2=MotorEncoder2.read();  //get motor counts for motor 2
      
@@ -167,16 +195,6 @@ void loop() {
     Serial.print(output_A);
     Serial.print('\t');
     Serial.println(output_B);
-   /*
-    Serial.print('\t'); 
-    Serial.print((RadA-RadAPrev)/(Interval_time*1000*(2.88/12)));
-    Serial.print('\t');
-    Serial.print((RadB-RadBPrev)/(Interval_time/1000*(2.88/12)));
-    Serial.print('\t');
-    Serial.print(counter1);
-    Serial.print('\t');
-    Serial.println(counter2);
-    */
     
      RadAPrev=RadA;
      RadBPrev=RadB;
