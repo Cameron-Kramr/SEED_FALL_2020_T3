@@ -33,7 +33,7 @@ class module():
 
     #Default Updater
     def __update__(self, args):
-        print(str(self.ID) + "Module using default updater")
+        print(str(self.ID) + " Module using default updater")
 
     #System updater function
     def update(self, args):

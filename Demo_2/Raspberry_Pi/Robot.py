@@ -15,7 +15,7 @@ import enum
 import time
 import Modules.Module
 
-import GPS.GPS as GPS
+import Modules.GPS_Handler as gps
 
 import Modules.Ardu_Handler as adh
 import Modules.I2C_Handler as i2ch
@@ -38,11 +38,11 @@ class Robot_States(enum.Enum):
 ###############     Robot Class Definition      ####################
 class Robot():
     def __init__(self):
-        self.Update_FPS = 60
+        self.Debug = False
+        self.Update_FPS = 0
+        self.Run_FPS = 0
         self.Start_Time = time.time()
         self.End_Time = time.time()
-
-        self.GPS = GPS.GPS_System();
 
         self.Threads = {}        #container for all threading objects generated
         self.Modules = {}            #Dictionary for all pipes that will be used by updater functions
@@ -99,10 +99,15 @@ class Robot():
 
     #Updates all modules sending the robot handle for all global variables
     def update_Modules(self):
+        self.set_Start()
         for i in self.Modules:
             #print("Updating: " + str(self.Modules[i].ID))
             self.Modules[i].update(self)
             #print(self.Modules[i].calc_FPS())
+        self.set_End()
+        self.Run_FPS = self.calc_FPS()
+        if(self.Debug):
+            print("Robot FPS: " + str(self.Run_FPS))
     #Updates a single module
     def update_Module(self, ID):
         self.Modules[ID].update(self)
@@ -132,24 +137,25 @@ class Demo_2_Robot(Robot):
         picam_conn1, picam_conn2 = mp.Pipe(duplex = True)
         I2C_pipe_1, I2C_pipe_2 = mp.Pipe(duplex = True)
         ARDU_pipe_1, ARDU_pipe_2 = mp.Pipe(duplex = True)
+        GPS_Pipe_1, GPS_Pipe_2 = mp.Pipe(duplex = True)
 
     #Create Multiprocessing Objects
         self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60, True,))
         self.add_Thread("PY_GAME", target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
-        self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,True,))
-        self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters, True,))
-        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, True, np.array([0,0,-0.0175]),))
+        self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,False,))
+        self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters, False,))
+        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, False, np.array([0,0,-0.0175]),))
         self.add_Thread("PI_I2C", target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
         self.add_Thread("PI_ARDU", target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
 
     #Create appropriate modules for handling thread interactions
         self.add_Module("PI_ARDU", adh.ARDU_Handler(self, ARDU_pipe_1))
         self.add_Module("PI_I2C", i2ch.I2C_Handler(self, I2C_pipe_1))
-
+        self.add_Module("GPS", gps.GPS_Handler(self, GPS_Pipe_2))
         side_length = 0.025
         offset_mat = np.array((0,0,-0.0175))
 
-        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], cv2_conn1, [pygme_conn1]))
+        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], cv2_conn1, [pygme_conn1, GPS_Pipe_1]))
 
 
 if __name__ == "__main__":

@@ -75,8 +75,8 @@ class CV_Handler(module):
                 for receiver in self.receiving_pipes:
                     receiver.send(data)
                 try:
-                    print(data[0][2][0][0][0])
-                    args.I2C_MSSG.append([1,str(data[0][2][0][0][0])])
+                    #print(data[0][2][0])
+                    args.I2C_MSSG.append([1,str(data[0][2[0]])])
                 except:
                     #print("No Args ;(")
                     pass

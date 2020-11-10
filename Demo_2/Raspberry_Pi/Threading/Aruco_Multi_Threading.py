@@ -53,15 +53,15 @@ def pygame_aruco_display_manager(input_pipe, debug = False):
         for i in inputs:
             #print("Pygame processing: " + str(i[0]))
             #create text image for showing the marker ID
-            img = font.render("ID: " + str(i[0][0]), True, (255, 0, 0))
+            img = font.render("ID: " + str(i[0]), True, (255, 0, 0))
 
             #Find the position the marker should appear on the display
-            px = int(i[2][0][0][0] * gain + width/2)
-            py = int(height - i[2][0][0][2] * gain)
+            px = int(i[1][0] * gain + width/2)
+            py = int(height - i[1][2] * gain)
             #Draw the circle and blit the text onto the display
             pygame.draw.circle(gameDisplay, (255, 255, 255), (px, py), 10)
             gameDisplay.blit(img, (px, py - 10))
-            
+
         #Record the end time 
         end_time = time.time()
         
@@ -98,7 +98,8 @@ def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False
             dst, _ = cv2.Rodrigues(rvecs)
 
             tvecs = tvecs + dst@offset_mat
-            output.append([i[0], rvecs, tvecs])
+            output.append([i[0][0], tvecs.reshape(3), rvecs.reshape(3)])
+
         #Send output back to main thread for further processing
         input_pipe.send(output)
 
@@ -171,7 +172,8 @@ def picam_image_grabbler(inputpipe, image_pipes, resolution, frame_rate, debug =
         if(debug):
             #cv2.imshow("Image", frame.array)
             #key = cv2.waitKey(1)
-            print("Grabbled at: " + str(int(calc_fps(start_time, time.time()))))
+            #print("Grabbled at: " + str(int(calc_fps(start_time, time.time()))))
+            pass
 
         #Clear the pipe counter if necessary
         if(output_counter >= out_pipe_count):
