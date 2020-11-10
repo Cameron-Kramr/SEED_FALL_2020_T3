@@ -16,11 +16,11 @@ import time
 import Modules.Module
 
 import Modules.GPS_Handler as gps
-
 import Modules.Ardu_Handler as adh
 import Modules.I2C_Handler as i2ch
 import Modules.CV_Handler as cvh
 import Modules.detect_angle as dta
+import Modules.PyGame_Handler as pgh
 
 import Threading.Pi_Comms_Multi_Threading as pcmt
 import Threading.Aruco_Multi_Threading as amt
@@ -117,6 +117,12 @@ class Robot():
         self.Modules[ID] = module
         self.Modules[ID].ID = ID
 
+    def debug_Module(self, ID):
+        self.Modules[ID].Debug = True
+
+    def debug_All_Modules(self):
+        for i in self.Modules:
+            self.debug_Module(i)
 
 ####################### Applicaiton specific robot derivative class ################################
 class Demo_2_Robot(Robot):
@@ -132,6 +138,7 @@ class Demo_2_Robot(Robot):
     #Initiate Multiprocessing Pipes used for interconnecting the threads
         cv2_conn1, cv2_conn2 = mp.Pipe(duplex = True)
         pygme_conn1, pygme_conn2 = mp.Pipe(duplex = True)
+        pygme_local_1, pygme_local_2 = mp.Pipe(duplex = True)
         cv2_aruco_1_conn1, cv2_aruco_1_conn2 = mp.Pipe(duplex = True)
         cv2_aruco_2_conn1, cv2_aruco_2_conn2 = mp.Pipe(duplex = True)
         picam_conn1, picam_conn2 = mp.Pipe(duplex = True)
@@ -140,7 +147,7 @@ class Demo_2_Robot(Robot):
         GPS_Pipe_1, GPS_Pipe_2 = mp.Pipe(duplex = True)
 
     #Create Multiprocessing Objects
-        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60, True,))
+        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60, False,))
         self.add_Thread("PY_GAME", target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
         self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,False,))
         self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters, False,))
@@ -152,10 +159,12 @@ class Demo_2_Robot(Robot):
         self.add_Module("PI_ARDU", adh.ARDU_Handler(self, ARDU_pipe_1))
         self.add_Module("PI_I2C", i2ch.I2C_Handler(self, I2C_pipe_1))
         self.add_Module("GPS", gps.GPS_Handler(self, GPS_Pipe_2))
-        side_length = 0.025
-        offset_mat = np.array((0,0,-0.0175))
+        self.add_Module("PY_GAME", pgh.PyGame_Handler(self, pygme_local_2, pygme_conn1))
 
-        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], cv2_conn1, [pygme_conn1, GPS_Pipe_1]))
+        side_length = 0.025
+        offset_mat = np.array((0,0,0))
+
+        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], cv2_conn1, [pygme_local_1, GPS_Pipe_1]))
 
 
 if __name__ == "__main__":

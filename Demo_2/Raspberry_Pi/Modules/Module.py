@@ -13,6 +13,7 @@ class module():
         self.End_Time = time.time()
         self.ID = ID
         self.Debug = False
+        self.Active = True
 
     def set_Start(self):
         self.Start_Time = time.time()
@@ -31,6 +32,14 @@ class module():
     def check_Time(self):
         return (1/self.FPS <= self.End_Time - self.Start_Time)
 
+    #Activate the module
+    def activate(self):
+        self.Active = True
+
+    #Deactivate the module
+    def deactivate(self):
+        self.Active = False
+
     #Default Updater
     def __update__(self, args):
         print(str(self.ID) + " Module using default updater")
@@ -38,7 +47,7 @@ class module():
     #System updater function
     def update(self, args):
         self.set_End()
-        if(not self.Frame_Locked or self.check_Time()):
+        if((not self.Frame_Locked or self.check_Time()) and self.Active):
             if(self.Frame_Locked and self.Debug):
                 print(str(self.ID) + " at: " + str(self.calc_FPS()) + " FPS")
             self.set_Start()

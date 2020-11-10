@@ -72,6 +72,9 @@ class CV_Handler(module):
                 #Send present data to receiver pipes
             while(self.pose_pipe.poll()):
                 data = self.pose_pipe.recv()
+
+                self.update_recently_seen(args,data)
+
                 for receiver in self.receiving_pipes:
                     receiver.send(data)
                 try:
@@ -80,3 +83,8 @@ class CV_Handler(module):
                 except:
                     #print("No Args ;(")
                     pass
+    #Updates the recently seen list in the args
+    def update_recently_seen(self,args,data):
+        args.Recent_Markers = []
+        for i in data:
+            args.Recent_Markers.append(i[0])

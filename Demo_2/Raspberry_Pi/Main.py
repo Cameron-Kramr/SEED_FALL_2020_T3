@@ -21,9 +21,11 @@ import Robot
 
 
 robot = Robot.Demo_2_Robot()
-robot.Debug = True
+#robot.Debug = True
 
 robot.start_All_Threads()
+
+robot.debug_All_Modules()
 
 while(True):
     robot.update_Modules()
