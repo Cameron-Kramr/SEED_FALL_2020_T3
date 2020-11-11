@@ -1,7 +1,7 @@
 int index = 0;
 char space[1] = {' '};                                    //needed so the program knows to split up input string whenever a space occurs
 char stringInput[30];                                     //the char array that the input string is placed in
-String tooken[5];                                         //5 commands per string sent
+String tooken[5];                                         //5 commands per input string sent
 float RFloat;                                             //dummy global variables
 float OFloat;
 float TFloat;
@@ -125,7 +125,7 @@ void decodeString(){
   }
 }
 
-    /*while(tokens != NULL){
+    /*while(tokens != NULL){                        IGNORE THESE, THEY'RE JUST PROTOTYPE CODE I WANTED TO REFERENCE WHILE I MADE THE CODE. ITS NOT RELEVANT ANYMORE.
       //Serial.println(tokens);
       //tokens = strtok(NULL, space);
     //}
