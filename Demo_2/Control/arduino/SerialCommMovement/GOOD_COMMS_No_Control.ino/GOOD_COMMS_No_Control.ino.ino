@@ -20,15 +20,13 @@
 #define kd_B (0) //Wheel 2 velocity dif. gain
 #define ki_B (515.918210751475)   //Wheel 2 velocity int. gain
 
-#define char_buffer_len 30
-
 Encoder MotorEncoder1(2,6); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 Encoder MotorEncoder2(3,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 //comm stuff
 int index = 0;
-char space = ' ';                                    //needed so the program knows to split up input string whenever a space occurs
-char stringInput[char_buffer_len];                                     //the char array that the input string is placed in
-String tooken;                                         //5 commands per string sent
+char space[1] = {' '};                                    //needed so the program knows to split up input string whenever a space occurs
+char stringInput[30];                                     //the char array that the input string is placed in
+String tooken[5];                                         //5 commands per string sent
 float RFloat;                                             //dummy global variables
 float OFloat;
 float TFloat;
@@ -101,7 +99,7 @@ void setup() {
    pinMode(M1PWM,OUTPUT);
    pinMode(nSF,INPUT);     
    motor_shield.init(); 
-   Serial.begin (250000);//baud rate set to 250000
+   Serial.begin (1000000);//baud rate set to 250000
    Vel_A_PID.setTimeStep(Interval_time);
    Vel_B_PID.setTimeStep(Interval_time);
 }
@@ -169,43 +167,75 @@ void HardCodeSpin(double *omega, double *Radius,double Timespin,double Time_1)
 
 void decodeString(){
   if (Serial.available() > 0){
-    Serial.readBytesUntil('\n',stringInput,char_buffer_len);                      //the "@" is arbitrary, only reads in 30 characters
-    tooken = strtok(stringInput, space);                     //this splits off a chunk of the input string (until the first ' ') and puts it in a string array
-    //Serial.println(stringInput);
-    
+    Serial.readBytesUntil('@',stringInput,30);                      //the "@" is arbitrary, only reads in 30 characters
+    tooken[index] = strtok(stringInput, space);                     //this splits off a chunk of the input string (until the first ' ') and puts it in a string array
     counter1_offset = MotorEncoder1.read();
     counter2_offset = MotorEncoder2.read();
     RadAPrev = 0;
     RadBPrev = 0;
     Time=0;
-    
-    //Serial.println(tooken[0]);
-    //Serial.println(tooken[0] == 'R');
-    
-    while(tooken != NULL){                                     //checks if there are more command strings left
-        switch (tooken[0]){
+    switch (tooken[index][0]){                                      //chooses which variable to set based on first character of the current string
+        case 'R':
+          tooken[index].setCharAt(0,'0');                           //sets the first character to a zero so only the float is left
+          RFloat = tooken[index].toFloat();                         //sets corresponding global variable to the float determined
+          Radius=double(RFloat);
+          break;
+
+        case 'O':
+          tooken[index].setCharAt(0,'0');                          //sets the first character to a zero so only the float is left
+          OFloat = tooken[index].toFloat();                         //sets corresponding global variable to the float determined
+          omega=double(OFloat);
+          break;
+        
+        case 'T':
+          tooken[index].setCharAt(0,'0');                          //sets the first character to a zero so only the float is left
+          TFloat = tooken[index].toFloat();                         //sets corresponding global variable to the float determined
+          TimeDes=double(TFloat)*1000+550;                         //*1000+550, because comes in in seconds and the 550 is for the rise time delay
+          break;
+        
+        case 'V':
+          tooken[index].setCharAt(0,'0');                         //sets the first character to a zero so only the float is left
+          VFloat = tooken[index].toFloat();                       //sets corresponding global variable to the float determined
+          inputVel=double(VFloat);
+          break;
+        
+        case 'C':
+          Hit_Hard_Code=true;                                     //Bool statement to set true when we reach the special case C
+          i=0;                                                    //reset i=0 so we can go back through the hard code if so pleased 
+          break;
+          
+        default:
+          break;
+    }
+
+    while (index < 5){                                                //This will loop the same things as above, but for each other commands in the input string
+      if (tooken[index] != NULL){                                     //checks if there are more command strings left
+        index++;
+        tooken[index] = strtok(NULL,space);                           //splits off another chunk of the input string (another command)
+        
+        switch (tooken[index][0]){
           case 'R':
-            tooken[0] = '0';                          //sets the first character to a zero so only the float is left
-            RFloat = tooken.toFloat();                         //sets corresponding global variable to the float determined
+            tooken[index].setCharAt(0,'0');                          //sets the first character to a zero so only the float is left
+            RFloat = tooken[index].toFloat();                         //sets corresponding global variable to the float determined
             Radius=double(RFloat);
             break;
 
           case 'O':
-            tooken.setCharAt(0,'0');                          //sets the first character to a zero so only the float is left
-            OFloat = tooken.toFloat();                        //sets corresponding global variable to the float determined
+            tooken[index].setCharAt(0,'0');                          //sets the first character to a zero so only the float is left
+            OFloat = tooken[index].toFloat();                        //sets corresponding global variable to the float determined
             omega=double(OFloat);
             break;
         
           case 'T':
-            tooken.setCharAt(0,'0');                          //sets the first character to a zero so only the float is leftleft
-            TFloat = tooken.toFloat();                        //sets corresponding global variable to the float determined
-            TimeDes=double(TFloat);
+            tooken[index].setCharAt(0,'0');                          //sets the first character to a zero so only the float is leftleft
+            TFloat = tooken[index].toFloat();                        //sets corresponding global variable to the float determined
+            TimeDes=double(TFloat)*1000+550;                         //*1000+550, because comes in in seconds and the 550 is for the rise time delay
             break;
         
           case 'V':
-            tooken.setCharAt(0,'0');                          //sets the first character to a zero so only the float is left
-            VFloat = tooken.toFloat();                        //sets corresponding global variable to the float determined
-            inputVel=double(VFloat);
+            tooken[index].setCharAt(0,'0');                          //sets the first character to a zero so only the float is left
+            VFloat = tooken[index].toFloat();                        //sets corresponding global variable to the float determined
+            inputVel=double(VFloat);                        
             break;
         
           case 'C':
@@ -214,15 +244,29 @@ void decodeString(){
             break;
           
           default:
-            Serial.println("I dont know this character.");            //If it doesn't recognize the first character
+               break;  
         }
-          tooken = strtok(NULL,space);                           //splits off another chunk of the input string (another command)
+      }
+      
+      else {
+        //Serial.println(index);
+        index = 5;                                                    //breaks out of the while loop
+        //Serial.println("It was NULL.");
       }
     }
-    for(i = 0; i < char_buffer_len; i ++)
+    
+    index = 0;
+    while (index<5){                                                        //clears the tookens that hold each string inputed
+      tooken[index] = "";
+      index++;
+    }
+    
+    index = 0;
+    for (int i=0; i<30; i++){                                               //clears the stringInput array
       stringInput[i] = 0;
+    }
+  }
 }
-
 void loop() {
   while(millis()> Time_1 + Interval_time)
   {
@@ -269,10 +313,6 @@ void loop() {
     //sets the output of the controllers (PWM) to run the motors
      motor_shield.setM1Speed(output_A);
      motor_shield.setM2Speed(output_B);
-
-    //Serial.print(Vel_A);
-    //Serial.print('\t');
-   //Serial.println(Vel_B);
     
      RadAPrev=RadA;
      RadBPrev=RadB;
