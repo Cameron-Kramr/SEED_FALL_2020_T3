@@ -142,18 +142,29 @@ double SummingBlock(double Vel_W,double inputVel)
 }
 
 
-void HardCodeSpin(double *omega, double *Radius)
+void HardCodeSpin(double *omega, double *Radius,double Timespin,double Time_1)
 {
+  if(Time_1>=TimeSpin){//spin 90 deg
   *omega=1.5;
   *Radius=0;
-  
-}
-void HardCodeRotation(double *omega, double *Radius)
-{
+  }
+  if(Time_1>=TimeSpin+1300)//reach 90 degs and stop
+  {
+  *omega=0;
+  *Radius=0;
+  }
+   if(Time_1>=TimeSpin+1300+500)//wait .5 seconds after stopping to move around the beacon with a radius of 1
+  {
   *omega=1.25;
   *Radius=1;
-  
+  }
+   if(Time_1>=TimeSpin+1300+500+5590)//finish the movement around the beacon set all values back to zero
+  {
+  *omega=0;
+  *Radius=0;
+  }
 }
+
 void decodeString(){
   if (Serial.available() > 0){
     Serial.readBytesUntil('@',stringInput,30);                      //the "@" is arbitrary, only reads in 30 characters
@@ -189,7 +200,8 @@ void decodeString(){
           break;
         
         case 'C':
-          Hit_Hard_Code=true;
+          Hit_Hard_Code=true;                                     //Bool statement to set true when we reach the special case C
+          i=0;                                                    //reset i=0 so we can go back through the hard code if so pleased 
           break;
           
         default:
@@ -227,7 +239,8 @@ void decodeString(){
             break;
         
           case 'C':
-            Hit_Hard_Code=true;         //this is incase anyone wants to create a new command
+            Hit_Hard_Code=true;                         
+            i=0;
             break;
           
           default:
@@ -257,31 +270,24 @@ void decodeString(){
 void loop() {
   while(millis()> Time_1 + Interval_time)
   {
-
-     decodeString();
+      if(Time>=TimeDes)
+      {
+        omega=0;
+        Radius=0;
+        inputVel=0;
+ 
+        }
+     decodeString(); //Decodes values sent from the serial 
     
-        if(Hit_Hard_Code == true && i==0)//think about how to do this without time stops
+       if(Hit_Hard_Code == true && i==0)//WHen we reach the special character start the spin
       {
-      HardCodeSpin(&omega,&Radius);
-      TimeSpin=Time_1;
-      i++;
+      TimeSpin=Time_1; //set the spin time as the current sample time
+      HardCodeSpin(&omega,&Radius,TimeSpin,Time_1);    //run the spin function
+      i++;//increment so the time doesnt get reset to the current sample time
       }
-     
-     if(Hit_Hard_Code == true && Time_1>= TimeSpin+1300)//know that we have hit aoutt 90 deg
+      if(Hit_Hard_Code ==true && i!=0)//used so the hardcode spin could be continually ran 
       {
-        omega=0;
-        Radius=0;
-      }
-      
-      if(Hit_Hard_Code == true && Time_1>= TimeSpin+1300+500)//wait about 1 second after the spin is completed to start rotation
-      {
-      HardCodeRotation(&omega,&Radius);
-      }
-     
-      if(Hit_Hard_Code == true && Time_1>= TimeSpin+1300+500+5590)//Stop rotation about when the bot makes it to 360 deg (should make a 360 in about 5290ms or 5 seconds)
-      {
-        omega=0;
-        Radius=0;
+        HardCodeSpin(&omega,&Radius,TimeSpin,Time_1);
       }
 
      counter1=-1*MotorEncoder1.read()-(-1*counter1_offset); //get motor counts for motor 1 multiplied by -1 because the counts were backwards
@@ -308,9 +314,9 @@ void loop() {
      motor_shield.setM1Speed(output_A);
      motor_shield.setM2Speed(output_B);
 
-    Serial.print(Time_1);
+    Serial.print(Vel_A);
     Serial.print('\t');
-    Serial.println(TimeSpin);
+    Serial.println(Vel_B);
     
      RadAPrev=RadA;
      RadBPrev=RadB;
