@@ -26,8 +26,8 @@ Encoder MotorEncoder1(2,6); //used 2 and 3 as they have the best interrupt timin
 Encoder MotorEncoder2(3,5); //used 2 and 3 as they have the best interrupt timing, will need to change when adding second motor
 //comm stuff
 int index = 0;
-char space = ' ';                                    //needed so the program knows to split up input string whenever a space occurs
-char stringInput[char_buffer_len];                                     //the char array that the input string is placed in
+char space[] = {' '};                                    //needed so the program knows to split up input string whenever a space occurs
+char stringInput[30];                                     //the char array that the input string is placed in
 String tooken;                                         //5 commands per string sent
 float RFloat;                                             //dummy global variables
 float OFloat;
@@ -101,7 +101,7 @@ void setup() {
    pinMode(M1PWM,OUTPUT);
    pinMode(nSF,INPUT);     
    motor_shield.init(); 
-   Serial.begin (250000);//baud rate set to 250000
+   Serial.begin (1000000);//baud rate set to 250000
    Vel_A_PID.setTimeStep(Interval_time);
    Vel_B_PID.setTimeStep(Interval_time);
 }
@@ -124,14 +124,14 @@ void RadToVel (double RadA,double RadB, double RadAPrev, double RadBPrev, double
 //finds setpoint of linear velocity with a given angular velocity
 void AngularVelToLinearA(double omega,double Radius, double* Vel_WA, double* Vel_WB)
 {
-     if(Radius>0)
+     if(omega>0)
    {
     *Vel_WA=omega*(Radius+d);//relook at d I dont remeber but i think the 1/2 needs to be removed for this equation to hold
     *Vel_WB=omega*(Radius-d);  
     }
     else{
-    *Vel_WA=omega*(Radius-d);
-    *Vel_WB=omega*(Radius+d);
+    *Vel_WA=-1*omega*(Radius-d);
+    *Vel_WB=-1*omega*(Radius+d);
       }
 
 }
@@ -173,8 +173,7 @@ void decodeString(){
   if (Serial.available() > 0){
     Serial.readBytesUntil('\n',stringInput,char_buffer_len);                      //the "@" is arbitrary, only reads in 30 characters
     
-    tooken = strtok(stringInput, space);                     //this splits off a chunk of the input string (until the first ' ') and puts it in a string array
-    Serial.println(stringInput);
+    tooken = strtok(stringInput,space);                     //this splits off a chunk of the input string (until the first ' ') and puts it in a string array
     leading = tooken[0];
     tooken.remove(0,1);
     
@@ -193,22 +192,16 @@ void decodeString(){
           case 'R':
             RFloat = tooken.toFloat();                         //sets corresponding global variable to the float determined
             Radius=double(RFloat);
-            Serial.print("R: ");
-            Serial.println(Radius);
             break;
 
           case 'O':
             OFloat = tooken.toFloat();                        //sets corresponding global variable to the float determined
             omega=double(OFloat);
-            Serial.print("O: ");
-            Serial.println(omega);
             break;
         
           case 'T':
             TFloat = tooken.toFloat();                        //sets corresponding global variable to the float determined
-            TimeDes=double(TFloat);
-            Serial.print("T: ");
-            Serial.println(TimeDes);
+            TimeDes=double(TFloat)*1000+550+millis();
             break;
         
           case 'V':
@@ -227,24 +220,66 @@ void decodeString(){
           tooken = strtok(NULL,space);                           //splits off another chunk of the input string (another command)
           leading = tooken[0];
           tooken.remove(0,1);
+          
       }
     }
     for(i = 0; i < char_buffer_len; i ++)
       stringInput[i] = 0;
 }
-
 void loop() {
   while(millis()> Time_1 + Interval_time)
   {
-      if(Time>=TimeDes)
+     
+      if(millis()>=TimeDes && TimeDes!=0)
       {
         omega=0;
         Radius=0;
         inputVel=0;
+        TimeDes=0;
  
         }
      decodeString(); //Decodes values sent from the serial 
+    
+       if(Hit_Hard_Code == true && i==0)//WHen we reach the special character start the spin
+      {
+      TimeSpin=Time_1; //set the spin time as the current sample time
+      HardCodeSpin(&omega,&Radius,TimeSpin,Time_1);    //run the spin function
+      i++;//increment so the time doesnt get reset to the current sample time
+      }
+      if(Hit_Hard_Code ==true && i!=0)//used so the hardcode spin could be continually ran 
+      {
+        HardCodeSpin(&omega,&Radius,TimeSpin,Time_1);
+      }
 
+     counter1=-1*MotorEncoder1.read()-(-1*counter1_offset); //get motor counts for motor 1 multiplied by -1 because the counts were backwards
+     counter2=MotorEncoder2.read()-counter2_offset;  //get motor counts for motor 2
+     
+     //finiding radial positon of each wheel 
+     CountsToRad(counter1,counter2,&RadA,&RadB);
+  
+     // Finding linear velocity from the radial position of each wheel 
+      RadToVel(RadA,RadB,RadAPrev,RadBPrev,Interval_time,&Vel_A,&Vel_B);
+  
+     //Angular velocity input converted to linear velocity of each wheel
+     AngularVelToLinearA(omega,Radius,&Vel_WA,&Vel_WB);
+     
+     //Summing block to set setpoint for wheel velocity control   
+     setpoint_A=SummingBlock(Vel_WA,inputVel);
+     setpoint_B=SummingBlock(Vel_WB,inputVel);
+  
+     //runs the velocity controllers 
+     Vel_A_PID.run(); 
+     Vel_B_PID.run();
+
+    //sets the output of the controllers (PWM) to run the motors
+     motor_shield.setM1Speed(output_A);
+     motor_shield.setM2Speed(output_B);
+
+     RadAPrev=RadA;
+     RadBPrev=RadB;
+  
+     Time_1=millis(); //Change time so it runs at an incremeted 10ms
+     //Time+=Interval_time;
     }
 
 }
