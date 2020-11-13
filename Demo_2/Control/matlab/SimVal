@@ -1,0 +1,8 @@
+k_A=.008416;
+sigma_A=9.97;
+k_B=.007555;
+sigma_B=11.07;
+out=sim('Rotational_to_linear');
+x1=out.Xpos1;
+y1=out.Ypos1;
+plot(x1.data,y1.data)
