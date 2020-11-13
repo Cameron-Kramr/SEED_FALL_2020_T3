@@ -29,7 +29,7 @@ class CV_Calc_Handler(module):
                 #([id, corners], ...)
                 #blocking wait on data to appear at input pipe
                 data = cv_pipe.recv()
-                    
+                args.Recent_Pose = data
                 #Loop over the inputs received from the pipe
                 for i in data:
                     #Find the translation and rotation vectors. Object points less important
@@ -54,6 +54,8 @@ class CV_Handler(module):
         self.cv_pipes = cv_pipes
         self.receiving_pipes = receiving_pipes
         self.pose_pipe = pose_pipe
+        args.Recent_Markers = []
+        args.Recent_Pose = []
 
     def __update__(self, args):
         
@@ -68,21 +70,26 @@ class CV_Handler(module):
                 #Expect data of shape:
                 #([id, corners], ...)
                 #blocking wait on data to appear at input pipe
+                #print("Start Reading CV pipe")
+                #if(cv_pipe.poll()):
                 self.pose_pipe.send(cv_pipe.recv())
+                #print("End Reading CV pipe")
                 #Send present data to receiver pipes
             while(self.pose_pipe.poll()):
                 data = self.pose_pipe.recv()
-
+                args.Recent_Pose = data
+                #print("Reading pose pipe")
                 self.update_recently_seen(args,data)
-
+                #print("Recent Markers")
+                print(args.Recent_Markers)
                 for receiver in self.receiving_pipes:
                     receiver.send(data)
-                try:
+                #try:
                     #print(data[0][2][0])
-                    args.I2C_MSSG.append([1,str(data[0][2[0]])])
-                except:
+                    #args.I2C_MSSG.append([1,str(data[0][2[0]])])
+                #except:
                     #print("No Args ;(")
-                    pass
+                    #pass
     #Updates the recently seen list in the args
     def update_recently_seen(self,args,data):
         args.Recent_Markers = []

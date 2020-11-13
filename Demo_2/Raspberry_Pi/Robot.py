@@ -1,31 +1,31 @@
-#Cameron Kramr
-#11/06/2020
-#EENG 350
-#Section A
-#Computer Vision
-#NOTE, this module requires pygame to be installed in order to run
-#This file implements the robot class which stores, and implements robot code
+#Cameron Kramr 11/06/2020 EENG 350 Section A Computer Vision NOTE, this module requires pygame to be 
+#installed in order to run This file implements the robot class which stores, and implements robot code
 
-#Standard Modules
+########## Library Imports ############
 import sys
 import numpy as np
 import multiprocessing as mp
 import math
 import enum
 import time
+
 import Modules.Module
 
+################ Module Imports ###############
 import Modules.GPS_Handler as gps
 import Modules.Ardu_Handler as adh
 import Modules.I2C_Handler as i2ch
 import Modules.CV_Handler as cvh
 import Modules.detect_angle as dta
 import Modules.PyGame_Handler as pgh
+import Modules.Robot_Control_Handler as rch
+import Modules.Movements as move
 
+################ Threading Imports ############
 import Threading.Pi_Comms_Multi_Threading as pcmt
 import Threading.Aruco_Multi_Threading as amt
 
-#Raspberry Pi Modules
+############ Raspberry Pi Modules ###############
 import picamera
 import cv2
 
@@ -39,6 +39,7 @@ class Robot_States(enum.Enum):
 class Robot():
     def __init__(self):
         self.Debug = False
+        self.Continue = True
         self.Update_FPS = 0
         self.Run_FPS = 0
         self.Start_Time = time.time()
@@ -84,7 +85,7 @@ class Robot():
     def close_Thread(self, ID):
             self.Threads[ID].close()
 
-    def close_All_Threads(self, ID):
+    def close_All_Threads(self):
             for i in self.Threads:
                 self.Threads[i].close()
 
@@ -116,6 +117,7 @@ class Robot():
     def add_Module(self, ID, module):
         self.Modules[ID] = module
         self.Modules[ID].ID = ID
+        return ID
 
     def debug_Module(self, ID):
         self.Modules[ID].Debug = True
@@ -146,25 +148,28 @@ class Demo_2_Robot(Robot):
         ARDU_pipe_1, ARDU_pipe_2 = mp.Pipe(duplex = True)
         GPS_Pipe_1, GPS_Pipe_2 = mp.Pipe(duplex = True)
 
+        side_length = 0.2032
+        offset_mat = np.array((0,0,0))
+
     #Create Multiprocessing Objects
-        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 60, False,))
-        self.add_Thread("PY_GAME", target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
+        self.add_Thread("RASP_CAM", target = amt.picam_image_grabbler, args = (picam_conn2, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], (640,480), 10, False,))
+        #self.add_Thread("PY_GAME", target = amt.pygame_aruco_display_manager, args = (pygme_conn2,))
         self.add_Thread("CV_DETECT_1", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_1_conn2, aruco_dict, parameters,False,))
         self.add_Thread("CV_DETECT_2", target = amt.cv2_detect_aruco_routine, args = (cv2_aruco_2_conn2, aruco_dict, parameters, False,))
-        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, 0.025, cam_mtx, dist_mtx, False, np.array([0,0,-0.0175]),))
+        self.add_Thread("CV_POSE", target  = amt.cv2_estimate_pose, args = (cv2_conn2, side_length, cam_mtx, dist_mtx, False, np.array(offset_mat),))
         self.add_Thread("PI_I2C", target = pcmt.I2C_Handler, args = (I2C_pipe_2, (2,16), 0x08,))
         self.add_Thread("PI_ARDU", target = pcmt.Serial_Handler, args = (ARDU_pipe_2,))
+
 
     #Create appropriate modules for handling thread interactions
         self.add_Module("PI_ARDU", adh.ARDU_Handler(self, ARDU_pipe_1))
         self.add_Module("PI_I2C", i2ch.I2C_Handler(self, I2C_pipe_1))
         self.add_Module("GPS", gps.GPS_Handler(self, GPS_Pipe_2))
-        self.add_Module("PY_GAME", pgh.PyGame_Handler(self, pygme_local_2, pygme_conn1))
+        #self.add_Module("PY_GAME", pgh.PyGame_Handler(self, pygme_local_2, pygme_conn1))
+        self.add_Module("Robot_Ctrl", rch.robot_control_handler(self))
 
-        side_length = 0.025
-        offset_mat = np.array((0,0,0))
 
-        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], cv2_conn1, [pygme_local_1, GPS_Pipe_1]))
+        self.add_Module("CV_POSE", cvh.CV_Handler(self, [cv2_aruco_1_conn1, cv2_aruco_2_conn1], cv2_conn1, [GPS_Pipe_1]))
 
 
 if __name__ == "__main__":

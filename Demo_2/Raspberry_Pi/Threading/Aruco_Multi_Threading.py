@@ -77,14 +77,17 @@ def pygame_aruco_display_manager(input_pipe, debug = False):
 def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False, offset_mat = np.zeros((3))):
     output = []
     input = []
+    #input_pipe.set_blocking(False)
     #count = 0
-
+    #print("DETECTING")
     #Infinite loop runs subroutine until terminated by parent thread
     while(True):
         #Expect data of shape:
         #([id, corners], ...)
         #blocking wait on data to appear at input pipe
+        #print("CV_Thread getting pipe")
         inputs = input_pipe.recv()
+        #print("CV_Thread got pipe")
 
         #Record the start time
         start_time = time.time()
@@ -101,7 +104,9 @@ def cv2_estimate_pose(input_pipe, side_length, cam_mtx, dis_coefs, debug = False
             output.append([i[0][0], tvecs.reshape(3), rvecs.reshape(3)])
 
         #Send output back to main thread for further processing
+        #print("sending out pipe")
         input_pipe.send(output)
+            #print("sent out pipe")
 
         #Clear output
         output = []
@@ -120,11 +125,10 @@ def cv2_detect_aruco_routine(input_pipe, aruco_dict, parameters, debug = False):
     while(True):
         #Grab a frame
         frame_grab_start = time.time()
-        frame = input_pipe.recv()
+        frame_grey = input_pipe.recv()
         frame_grab_end = time.time()
         
         #Convert to grey scale
-        frame_grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         #debug info
         if(debug):
@@ -142,6 +146,7 @@ def cv2_detect_aruco_routine(input_pipe, aruco_dict, parameters, debug = False):
         if(len(corners) != 0):
             #construct & send output
             output = [(item, corners[iter]) for iter, item in enumerate(ids)]
+            #print("Found: " + str(output))
             input_pipe.send(output)
 
 #Grabblers the images and stuffs them into appropriate pipes
@@ -166,15 +171,17 @@ def picam_image_grabbler(inputpipe, image_pipes, resolution, frame_rate, debug =
         #print("Grabbled Frame!")
         #send image down appropriate pipes
         start_time = time.time()
-        image_pipes[output_counter].send(frame.array)
-        output_counter += 1
+        #print("PI Cam sending image into pipe:")
+        frame_grey = cv2.cvtColor(frame.array, cv2.COLOR_BGR2GRAY)
 
+        image_pipes[output_counter].send(frame_grey)
+        output_counter += 1
+        #print("Pi cam done sending image")
         if(debug):
-            #cv2.imshow("Image", frame.array)
             #key = cv2.waitKey(1)
             #print("Grabbled at: " + str(int(calc_fps(start_time, time.time()))))
+            #cv2.imshow("Image", frame.array)
             pass
-
         #Clear the pipe counter if necessary
         if(output_counter >= out_pipe_count):
             output_counter = 0
@@ -182,4 +189,6 @@ def picam_image_grabbler(inputpipe, image_pipes, resolution, frame_rate, debug =
         #Clear this mmal buffer so it won't overflow
         rawCapture.truncate(0)
 
-        start = time.time()
+        end = time.time()
+        if(debug):
+            print("Pi_CAM_FPS: " + str(int(calc_fps(start_time, end))))

@@ -63,7 +63,7 @@ def gather_points(num_captures, name, camera = None, patternSize = None, pattern
 		print(end - start)
 
 if (__name__ == "__main__"):
-	ret, cam_mtx, dist, rvecs, tvecs = gather_points(10, "joe", patternSpace = 0.02)
+	ret, cam_mtx, dist, rvecs, tvecs = gather_points(20, "joe", patternSpace = 0.02)
 	#print(cam_mtx)
 	#print(dist)
 

@@ -47,12 +47,17 @@ class module():
     #System updater function
     def update(self, args):
         self.set_End()
+        if(self.Debug):
+            print("************* Entering: " + str(self.ID) + " ************")
+
         if((not self.Frame_Locked or self.check_Time()) and self.Active):
             if(self.Frame_Locked and self.Debug):
                 print(str(self.ID) + " at: " + str(self.calc_FPS()) + " FPS")
             self.set_Start()
             self.__update__(args)
             self.set_End()
+        if(self.Debug):
+            print("******** Leaving: " + str(self.ID) + " *************")
         #else:
             #print("Not Updating")
 

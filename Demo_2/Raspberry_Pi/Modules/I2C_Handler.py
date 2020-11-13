@@ -5,7 +5,7 @@ class I2C_Handler(module):
     def __init__(self, args, pipe, ID = None):
         module.__init__(self, ID)
         self.Frame_Locked = True
-        self.FPS = 0.7
+        self.FPS = 1
         self.pipe = pipe
         
         args.I2C_MSSG = deque()

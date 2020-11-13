@@ -18,5 +18,5 @@ class PyGame_Handler(module):
 
             for i in args.GPS.Nodes:
                 output.append([i, args.GPS.Tw[:, args.GPS.Nodes[i]].reshape(3)])
-            output.append(["ROB", args.GPS.calc_node_Tw(data).reshape(3)])
+            output.append(["ROB", args.Position.reshape(3)])
             self.output.send(output)

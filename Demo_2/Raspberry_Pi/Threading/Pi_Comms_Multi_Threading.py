@@ -26,8 +26,7 @@ import ctypes
 #Create the valid commands for controlling thread operation
 class I2C_CMD(IntEnum):
     LCD_CLR_MSG = 1
-    WRITE_ARDU = 2
-    FETCH_ANGLE = 3
+    SET_CLR = 2
 
 class ARDU_CMD(IntEnum):
     TARGET = 250
@@ -35,10 +34,10 @@ class ARDU_CMD(IntEnum):
     RECEIVE = 2
 
 #Main Serial handler thread deals with Serial nonsense.
-def Serial_Handler(input_pipe, file = '/dev/ttyACM0', baud = 250000):
+def Serial_Handler(input_pipe, file = '/dev/ttyACM0', baud = 1000000):
         #Initialize Serial object
     ser = serial.Serial(file, baud)
-    FPS = 100
+    FPS = 50
     data2 = ""
     Start = time.time()
     #time.sleep(2)                                                          #might need it so 'ser' can work properly
@@ -54,45 +53,31 @@ def Serial_Handler(input_pipe, file = '/dev/ttyACM0', baud = 250000):
         try:
             if(input_pipe.poll()):
                 data = input_pipe.recv()
-
+            #print("Reading Data")
             while(ser.inWaiting()>0):
                 data2 += ser.readline().decode('utf-8')
                 #print("Arduino Data:")
                 #print(data2)
+            #print("Done Reading Data")
+            data2 = ""
         except:
             print("Serial Error")
 
         #print("Looping")
         if(data[0] == ARDU_CMD.SEND):                                         #Clear LCD and send it a string to display
-            try:
-            #ser.write((' '.join([str(item) for item in data[1]]
-                for i in data[1]:
-                    if(i != '\n'):
-                        ser.write(i.encode())
-                        #print(i)
-                #print("Sent Ardu:" + str(data[1]))
-                    #pass
-            except:
-                print("Something's wrong with sending Serial Data!")
+            #try:
+            ser.write(bytes(data[1], 'utf-8'))
+            print("~~~~~~~~~~~~~~~ Thread Sending Arduino ~~~~~~~~~~~~~~~~")
 
-        if(data2 != ""):                                      #if we need to get the position from arduino, this if statement
-                                                                            #will do it. Feel free to alter "get_position" to whatever you want.
-            try:
-                #data2 = ser.readline().decode('utf-8').rstrip()                 #gets data from arduino
-                input_pipe.send(data2)
-                data2 = ""
-                pass
-            except:
-                print("Something's wrong with getting Serial Data!")
-        #Clear data
         data[0] = 0
         #Frame lock arduino
-        while(time.time() - Start < 1/FPS):
-            pass
+        time.sleep(max(1/FPS - (time.time() - Start),0))
+
+        #time.sleep(time.time() - Start + 1/FPS):
 
 
 #Main I2C handler thread deals with I2C nonsense.
-def I2C_Handler(input_pipe, size, address, color = [255, 0, 0]):
+def I2C_Handler(input_pipe, size, address, color = [0, 255, 0]):
     #Initialize I2C objects
     i2c_bus = busio.I2C(board.SCL, board.SDA)
     lcd = character_lcd.Character_LCD_RGB_I2C(i2c_bus, size[1], size[0])
@@ -102,7 +87,7 @@ def I2C_Handler(input_pipe, size, address, color = [255, 0, 0]):
     sm_bus = SMBus(1)
 
     #Initialize variables
-    I2C_FPS = 100   #Frame rate control for thread to conserve resources
+    I2C_FPS = 10   #Frame rate control for thread to conserve resources
     I2C_Start = 0
     data = [0,0]
     data_in = ctypes.c_int8
@@ -110,14 +95,14 @@ def I2C_Handler(input_pipe, size, address, color = [255, 0, 0]):
     #Initialize LCD screen
     lcd.clear()
     lcd.color = color
-    lcd.message = "Init LCD Handler Done ;)"
+    lcd.message = "Init LCD \nHandler Done ;)"
 
     while(True):
         #Record time
         I2C_Start = time.time()
         #Data shape:
         #[cmd, content]
-        
+
         #Non-blocking read of pipe waiting for input
         if(input_pipe.poll()):
             data = input_pipe.recv()
@@ -130,25 +115,8 @@ def I2C_Handler(input_pipe, size, address, color = [255, 0, 0]):
                 pass
             except:
                 print("SM Bus Error!")
-        elif(data[0] == I2C_CMD.WRITE_ARDU): #Write to the arduino                                          #not needed anymore?
-            try:
-                print(data[1])
-                sm_bus.write_byte_data(address, 0, int(data[1]))
-            except:
-                print("SM Bus Error!")
-                sm_bus = SMBus(1)
-        elif(data[0] == I2C_CMD.FETCH_ANGLE): #Fetch the angle from the arduino                             #not needed anymore?
-            #print(sm_bus.read_byte_data(address, 0))
-            try:
-                #Need to preserve the sign to make this sensible, use ctypes for that
-                data_in = ctypes.c_int8(sm_bus.read_byte_data(address, 0))
-                #Convert data in from byte to degree angle
-                data_in = data_in.value/128*180
-                
-                #Send angle down pipe
-                input_pipe.send(data_in)
-            except:
-                print("SM Bus Error!")
+        elif(data[0] == I2C_CMD.SET_CLR):
+            lcd.color = data[1]
         #Clear data
         data[0] = 0
         #print("Sleep Time: " + str(max(1/I2C_FPS - (time.time() - I2C_Start),0)))
